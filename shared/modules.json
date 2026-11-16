@@ -1,0 +1,45 @@
+{
+  "updated": "2026-11-16",
+  "modules": [
+    {
+      "id": "iso",
+      "name": "ISO 文件表單",
+      "desc": "品質文件、檢驗記錄與簽核流程。含 SOP、SIP、Control Plan 與 FRM 系列表單。",
+      "path": "https://cceccecasters.github.io/iso-forms-web/",
+      "external": true,
+      "status": "live",
+      "meta": "10 張表單",
+      "roles": ["admin", "qa", "prod", "sales", "eng"]
+    },
+    {
+      "id": "board",
+      "name": "生產進度看板",
+      "desc": "派工單進度、工序流轉與交期風險。現場回報與異常卡關都在這裡處理。",
+      "path": "https://cceccecasters.github.io/caster-production-board/",
+      "external": true,
+      "status": "live",
+      "meta": "即時看板",
+      "roles": ["admin", "prod"]
+    },
+    {
+      "id": "shipping",
+      "name": "出貨通知",
+      "desc": "出貨單建立、客戶代碼對應與通知寄送。目前尚未建置。",
+      "path": "",
+      "external": false,
+      "status": "wip",
+      "meta": "規劃中",
+      "roles": ["admin", "sales"]
+    },
+    {
+      "id": "quality",
+      "name": "品質儀表板",
+      "desc": "不良率、客訴與矯正措施追蹤。目前尚未建置。",
+      "path": "",
+      "external": false,
+      "status": "wip",
+      "meta": "規劃中",
+      "roles": ["admin", "qa"]
+    }
+  ]
+}
