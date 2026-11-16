@@ -12,6 +12,9 @@
   var state = { current: FORMS[0].id, files: {}, savedAt: null, editingRid: null,
     viewRid: null, recLocked: false };
 
+  // 儲存紀錄進行中：按鈕鎖住，避免連點產生兩筆
+  var savingRecord = false;
+
   /* ---------- utils ---------- */
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -745,6 +748,30 @@ function draftKey(formId) { return "iso:draft:" + (userName() || "共用") + ":"
       state.stickyUntil = Date.now() + 5000;
       return;
     }
+    if (!state.current) return;
+    // 存檔中再點一次直接忽略，連點不會產生第二筆
+    if (savingRecord) {
+      setStatus("儲存中，請稍候…", "");
+      return;
+    }
+    var saveBtn = document.querySelector("[data-act='record']");
+    savingRecord = true;
+    if (saveBtn) {
+      saveBtn.setAttribute("data-idle-label", saveBtn.textContent);
+      saveBtn.disabled = true;
+      saveBtn.textContent = "儲存中…";
+    }
+    function releaseSaveBtn() {
+      savingRecord = false;
+      if (saveBtn) {
+        saveBtn.textContent = saveBtn.getAttribute("data-idle-label") || "儲存紀錄";
+        saveBtn.removeAttribute("data-idle-label");
+      }
+      // 交還給檢視／修改狀態決定是否可按，不要無條件打開
+      if (typeof applyRecMode === "function") applyRecMode();
+      else if (saveBtn) saveBtn.disabled = false;
+    }
+
     var f = formById(state.current);
     var card = document.querySelector('[data-form="' + f.id + '"]');
     var noInput = card.querySelector('[data-k="s0.no"]');
@@ -761,7 +788,7 @@ function draftKey(formId) { return "iso:draft:" + (userName() || "共用") + ":"
     }).catch(function () {
       setStatus("儲存逾時或取號失敗，請重新整理後再試", "warn");
       state.stickyUntil = Date.now() + 7000;
-    });
+    }).then(releaseSaveBtn, releaseSaveBtn);
   }
 
   function commitRecord(f, card, noInput) {
