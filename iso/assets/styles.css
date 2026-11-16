@@ -270,6 +270,56 @@ main {
   to { opacity: 1; transform: none; }
 }
 
+/* 未選擇表單時的空白頁（登入後不再自動開第一張） */
+.doc-empty {
+  min-height: 52vh;
+  display: grid;
+  place-items: center;
+}
+
+.doc-empty-inner {
+  max-width: 34em;
+  padding: 46px 30px;
+  text-align: center;
+  background: var(--card);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.doc-empty-eyebrow {
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.doc-empty h2 {
+  margin: 0 0 12px;
+  font-family: var(--font-serif);
+  font-size: 23px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.doc-empty-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+
+.doc-empty-meta {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+/* 空白頁時工具列沒有作用對象 */
+body.is-empty .actions { opacity: 0.45; }
+body.is-empty .actions label.file-btn,
+body.is-empty .actions button { pointer-events: none; }
+
 .doc-head { border-bottom: 2px solid var(--ink); padding-bottom: 14px; margin-bottom: 22px; }
 
 .doc-title h2 {

@@ -452,6 +452,7 @@ function draftKey(formId) { return "iso:draft:" + (userName() || "共用") + ":"
     saveTimer = setTimeout(saveNow, 500);
   }
   function saveNow() {
+    if (!state.current) return;   // 空白頁沒有表單可存
     var f = formById(state.current);
     // 「共用」代表還沒指定操作人，寫草稿會讓下一個人看到別人的內容，因此不存
     if ((userName() || "共用") === "共用") return;
@@ -1061,7 +1062,53 @@ function draftKey(formId) { return "iso:draft:" + (userName() || "共用") + ":"
   }
 
   /* ---------- routing ---------- */
+  // 未選擇表單時的空白頁：登入後不再自動跳到第一張表單
+  function showEmpty() {
+    var main = document.querySelector("[data-main]");
+    if (!main) return;
+    var box = document.getElementById("doc-empty");
+    if (!box) {
+      box = document.createElement("section");
+      box.id = "doc-empty";
+      box.className = "doc-empty";
+      box.innerHTML =
+        '<div class="doc-empty-inner">' +
+        '<p class="doc-empty-eyebrow">ISO 9001 · Documented Information</p>' +
+        '<h2>尚未選擇表單</h2>' +
+        '<p class="doc-empty-text">請從表單清單選擇要填寫或查閱的文件，選定後會自動載入草稿與歷史紀錄。</p>' +
+        '<p class="doc-empty-meta">共 ' + FORMS.length + " 張表單" +
+        "</p></div>";
+      main.appendChild(box);
+    }
+    box.hidden = false;
+    document.querySelectorAll(".doc").forEach(function (d) { d.hidden = true; });
+    document.querySelectorAll("[data-tab]").forEach(function (t) {
+      t.classList.remove("is-active");
+      t.setAttribute("aria-current", "false");
+    });
+    state.current = null;
+    state.files = {};
+    state.editingRid = null;
+    state.viewRid = null;
+    state.recLocked = false;
+    document.title = "ISO 紀錄表單 · " + META.companyCN;
+    history.replaceState(null, "", location.pathname + location.search);
+    var pw = document.querySelector(".progress-wrap");
+    if (pw) pw.hidden = true;
+    var rb = document.querySelector("[data-recbar]");
+    if (rb) rb.hidden = true;
+    document.body.classList.add("is-empty");
+    document.querySelectorAll(".actions button").forEach(function (b) { b.disabled = true; });
+    renderSideNav();
+  }
+
   function show(id) {
+    var emptyBox = document.getElementById("doc-empty");
+    if (emptyBox) emptyBox.hidden = true;
+    var pw = document.querySelector(".progress-wrap");
+    if (pw) pw.hidden = false;
+    document.body.classList.remove("is-empty");
+    document.querySelectorAll(".actions button").forEach(function (b) { b.disabled = false; });
     // 未知的 id 一律回到第一張，否則所有表單都會被隱藏（整頁空白）
     var fCheck = formById(id);
     if (fCheck.id !== id) id = fCheck.id;
@@ -1596,13 +1643,16 @@ function draftKey(formId) { return "iso:draft:" + (userName() || "共用") + ":"
       });
     }
 
-    // 先決定要顯示哪張表單並回填草稿，任何後續錯誤都不會造成白屏
+    // 只有網址指定了有效表單才開它；沒有就停在空白頁，不預選第一張
     var hash = location.hash.slice(1);
-    show(FORMS.some(function (f) { return f.id === hash; }) ? hash : FORMS[0].id);
-
-    var f = formById(state.current);
-    var d = document.querySelector('[data-form="' + f.id + '"] [data-k="s0.applyDate"]');
-    if (d && !d.value) d.value = today();
+    if (FORMS.some(function (f) { return f.id === hash; })) {
+      show(hash);
+      var f = formById(state.current);
+      var d = document.querySelector('[data-form="' + f.id + '"] [data-k="s0.applyDate"]');
+      if (d && !d.value) d.value = today();
+    } else {
+      showEmpty();
+    }
 
     on("[data-act='logout']", "click", function () {
     if (!confirm("確定登出？下次進入需要重新輸入密碼。")) return;
@@ -1727,7 +1777,7 @@ function draftKey(formId) { return "iso:draft:" + (userName() || "共用") + ":"
 
     window.addEventListener("hashchange", function () {
       var h = location.hash.slice(1);
-      if (!h) return;
+      if (!h) { showEmpty(); return; }
       var known = FORMS.some(function (f) { return f.id === h; });
       if (!known) {  // 無效 hash：留在原表單並把網址改回有效值
         history.replaceState(null, "", "#" + state.current);
