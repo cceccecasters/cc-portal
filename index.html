@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="description" content="彰銓企業內部作業系統入口">
+<title>彰銓企業 · 內部作業系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/theme.css">
+</head>
+<body>
+<a class="skip" href="#modules">跳至功能列表</a>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true">CC</span>
+    <span class="brand-text">
+      <strong>彰銓企業</strong>
+      <small>CHANG CHYUAN ENTERPRISE</small>
+    </span>
+  </div>
+  <div class="topbar-right">
+    <button id="who" class="who" type="button" title="切換操作人">
+      <span>操作人</span><b id="who-name">未設定</b>
+    </button>
+    <span class="ver" id="ver">v—</span>
+  </div>
+</header>
+
+<main>
+  <section class="intro">
+    <p class="eyebrow">INTERNAL OPERATIONS PORTAL</p>
+    <h1>內部作業系統</h1>
+    <p class="lede">ISO 文件表單、生產進度與現場資料的統一入口。所有模組共用同一個網域，操作人與草稿不需要重新設定。</p>
+    <p class="today" id="today"></p>
+  </section>
+
+  <section id="modules" class="grid" aria-label="功能模組">
+    <p class="loading" id="loading">載入模組中…</p>
+  </section>
+
+  <section class="notes" aria-label="使用說明">
+    <article>
+      <h3>舊網址仍可使用</h3>
+      <p>原本的書籤與 QR code 不會失效，會自動導向新位置。現場張貼的紙本標籤不需要重印。</p>
+    </article>
+    <article>
+      <h3>操作人共用</h3>
+      <p>入口與各模組位於同一網域，操作人姓名會沿用，切換一次全部生效。共用電腦請在離開前確認身分。</p>
+    </article>
+    <article>
+      <h3>資料仍存在 Google</h3>
+      <p>表單紀錄寫入公司試算表，照片存於雲端硬碟。入口頁本身不保存任何紀錄。</p>
+    </article>
+  </section>
+</main>
+
+<footer class="footer">
+  <span>彰銓企業股份有限公司 · 品保部維護</span>
+  <span id="footer-ver">版次 —</span>
+</footer>
+
+<script src="shared/shell.js"></script>
+</body>
+</html>
