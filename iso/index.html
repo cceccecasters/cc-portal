@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ISO 紀錄表單 · 彰銓企業股份有限公司</title>
+<meta name="description" content="ISO 9001 表單線上填寫：模具變更單、流程變更單、出貨同意單。">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css?v=2026-11-09.9">
+<link rel="stylesheet" href="assets/drawer.css?v=2026-11-09.9">
+</head>
+<body class="locked">
+
+<div class="gate" data-gate>
+  <form class="gate-card" data-gate-form autocomplete="off">
+    <div class="gate-brand">ISO 9001 · Documented Information</div>
+    <h2>ISO 紀錄表單</h2>
+    <p class="gate-sub">內部使用，請輸入存取密碼</p>
+    <input type="password" class="gate-input" data-gate-input placeholder="存取密碼" aria-label="存取密碼" />
+    <button type="submit" class="btn btn-primary gate-btn">進入系統</button>
+    <p class="gate-err" data-gate-err hidden>密碼不正確，請再試一次</p>
+    <p class="gate-note">彰銓企業股份有限公司</p>
+  </form>
+</div>
+
+<div class="lb" data-lb hidden>
+  <button type="button" class="lb-btn lb-close" data-lb-close aria-label="關閉">×</button>
+  <button type="button" class="lb-btn lb-prev" data-lb-prev aria-label="上一張">‹</button>
+  <button type="button" class="lb-btn lb-next" data-lb-next aria-label="下一張">›</button>
+  <div class="lb-stage" data-lb-stage>
+    <img class="lb-img" data-lb-img alt="照片放大檢視" />
+  </div>
+  <div class="lb-bar">
+    <span class="lb-cap" data-lb-cap>1 / 1</span>
+    <a class="lb-open" data-lb-open target="_blank" rel="noopener">另開原圖</a>
+    <span class="lb-tip">滾輪或雙指縮放 · 拖曳移動 · Esc 關閉</span>
+  </div>
+</div>
+
+<div class="gate" data-name-gate hidden>
+  <form class="gate-card" data-name-form autocomplete="off">
+    <div class="gate-brand">ISO 9001 · Documented Information</div>
+    <h2>請填寫操作人</h2>
+    <p class="gate-sub">姓名會顯示在紀錄與草稿上，請填寫真實姓名</p>
+    <input type="text" class="gate-input" data-name-input placeholder="您的姓名" aria-label="操作人姓名" maxlength="20" />
+    <p class="gate-err" data-name-err hidden>請輸入姓名（不可空白或使用「共用」）</p>
+    <button type="submit" class="btn btn-primary gate-btn">開始填寫</button>
+  </form>
+</div>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-line">ISO 9001 · Documented Information</div>
+      <h1>ISO 紀錄表單</h1>
+      <p data-company>彰銓企業股份有限公司</p>
+    </div>
+    <div class="header-meta">
+      <div><span class="dot"></span><span data-updated>管制版本</span></div>
+      <div>表單版本以文件管制總表為準</div>
+      <div class="operator">操作人：<strong data-operator>—</strong><button type="button" class="op-switch" data-operator-switch>切換</button></div>
+      <div class="operator"><button type="button" class="op-switch" data-act="logout">登出</button></div>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="toolbar-inner">
+    <nav class="tabs" data-nav aria-label="表單切換"></nav>
+    <div class="actions">
+      <button type="button" class="btn btn-primary" data-act="record">儲存紀錄</button>
+      <button type="button" class="btn" data-act="history">歷史紀錄 <span class="badge" data-count>0</span></button>
+      <button type="button" class="btn" data-act="save">儲存草稿</button>
+      <button type="button" class="btn" data-act="check">檢查必填</button>
+      <button type="button" class="btn" data-act="export">匯出 JSON</button>
+      <label class="btn file-btn">載入 JSON<input type="file" accept="application/json,.json" data-import></label>
+      <button type="button" class="btn btn-primary" data-act="print">列印／存 PDF</button>
+      <button type="button" class="btn btn-ghost" data-act="clear">清除草稿</button>
+    </div>
+  </div>
+  <div class="rec-bar" data-recbar hidden>
+    <span class="rec-bar-text" data-recbar-text></span>
+    <span class="rec-bar-ops">
+      <button type="button" class="btn btn-sm btn-ghost" data-act="rec-new">建立新表單</button>
+      <button type="button" class="btn btn-sm" data-act="rec-edit">修改</button>
+      <button type="button" class="btn btn-sm" data-act="rec-lock">鎖定</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-act="rec-close">結束檢視</button>
+    </span>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress"><span data-progress></span></div>
+    <span class="progress-label" data-progress-label>0% 完成</span>
+    <span class="status" data-status>尚未填寫</span>
+  </div>
+</div>
+
+<div class="layout">
+  <main data-main></main>
+  <aside class="side-nav" data-sidenav aria-label="表單分類"></aside>
+</div>
+
+<footer class="app-foot">
+  <span>彰銓企業股份有限公司 · ISO 9001 表單管制｜版次異動須同步 docs/文件管制總表.csv 與 docs/版本歷程總表.md</span>
+  <span data-storage-note>紀錄儲存於本機瀏覽器</span>
+</footer>
+
+<div class="drawer" data-drawer hidden>
+  <div class="drawer-mask" data-drawer-close></div>
+  <aside class="drawer-panel" role="dialog" aria-label="歷史紀錄">
+    <div class="drawer-head">
+      <div>
+        <h2 data-drawer-title>歷史紀錄</h2>
+        <p class="drawer-sub" data-drawer-sub></p>
+      </div>
+      <button type="button" class="btn btn-ghost" data-drawer-close>關閉</button>
+    </div>
+    <div class="drawer-tools">
+      <input type="search" data-record-search placeholder="搜尋單號、申請人、產品…" aria-label="搜尋紀錄">
+      <button type="button" class="btn btn-sm" data-record-reload title="重新向雲端取得最新清單">重新整理</button>
+      <span class="drawer-count" data-drawer-count></span>
+    </div>
+    <div class="drawer-body" data-record-list></div>
+  </aside>
+</div>
+
+<script src="assets/config.js?v=2026-11-09.9"></script>
+<script src="assets/forms.js?v=2026-11-09.9"></script>
+<script src="assets/storage.js?v=2026-11-09.9"></script>
+<script src="assets/app.js?v=2026-11-09.9"></script>
+<script>
+(function () {
+  var SEEN = "2026-11-09.9";
+  fetch("version.json?t=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error("no version"); return r.json(); })
+    .then(function (d) {
+      if (d && d.v && d.v !== SEEN && !sessionStorage.getItem("iso:reloaded")) {
+        sessionStorage.setItem("iso:reloaded", "1");
+        location.reload();
+      }
+    })
+    .catch(function () {});
+})();
+</script>
+</body>
+</html>

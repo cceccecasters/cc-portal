@@ -327,6 +327,23 @@ a.card:focus-visible { box-shadow: 0 0 0 3px var(--accent-soft), 0 10px 26px -14
   .notes { gap: 18px; }
 }
 
+.back-line { margin: 24px 0 0; }
+
+.back {
+  display: inline-block;
+  padding: 11px 18px;
+  background: var(--ink);
+  color: #fff;
+  border-radius: var(--radius);
+  font-family: var(--f-cjk);
+  font-size: 14px;
+  letter-spacing: .04em;
+  text-decoration: none;
+  transition: background .15s;
+}
+.back:hover { background: var(--accent); }
+.back:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }

@@ -1,12 +1,13 @@
 {
   "updated": "2026-11-16",
+  "note": "S2：ISO 已搬入 /iso/，改為相對路徑",
   "modules": [
     {
       "id": "iso",
       "name": "ISO 文件表單",
       "desc": "品質文件、檢驗記錄與簽核流程。含 SOP、SIP、Control Plan 與 FRM 系列表單。",
-      "path": "https://cceccecasters.github.io/iso-forms-web/",
-      "external": true,
+      "path": "./iso/",
+      "external": false,
       "status": "live",
       "meta": "10 張表單",
       "roles": ["admin", "qa", "prod", "sales", "eng"]
