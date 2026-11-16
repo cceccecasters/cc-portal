@@ -1,0 +1,1693 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>彰銓｜生產進度看板（腳輪廠）</title>
+<style>
+  :root{
+    --bg:#eef0ef; --panel:#fff; --ink:#132229; --ink-2:#3d5058; --muted:#6b7c83;
+    --line:#d7dedb; --accent:#0f766e; --accent-soft:#e6f2f0;
+    --high:#b42318; --high-soft:#fdeceb; --mid:#b45309; --mid-soft:#fdf3e6;
+    --low:#15803d; --low-soft:#ecf6ef; --done:#556770; --done-soft:#eef1f2;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;}
+
+  .topbar{
+    position:sticky; top:0; z-index:30; background:var(--ink); color:#fff;
+    display:flex; align-items:center; gap:14px; padding:0 18px; height:52px;
+  }
+  .brand{display:flex; align-items:baseline; gap:8px;}
+  .brand b{font-size:15px; letter-spacing:.06em;}
+  .brand span{font-size:10px; color:#8fa6ae; letter-spacing:.14em;}
+  .live{
+    display:inline-flex; align-items:center; gap:6px; font-size:11px;
+    color:#9fe3c8; border:1px solid #2f5a4d; background:#132a24;
+    padding:3px 8px; border-radius:2px; letter-spacing:.08em;
+  }
+  .live i{width:6px;height:6px;border-radius:50%;background:#4ade80; display:block; animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1} 50%{opacity:.25}}
+  .tb-right{margin-left:auto; display:flex; align-items:center; gap:10px; font-size:11px;}
+  .tb-right .seg{color:#b9c9ce; font-family:var(--mono);}
+  .tbtn{
+    background:transparent; color:#dce7ea; border:1px solid #38505a;
+    border-radius:2px; font-size:11px; padding:5px 10px; cursor:pointer;
+  }
+  .tbtn:hover{background:#1e343d;}
+  .tbtn.on{background:#e8eef0; color:#132229; border-color:#e8eef0;}
+
+  .kpis{
+    display:grid; grid-template-columns:repeat(5,1fr); gap:1px;
+    background:var(--line); border-bottom:1px solid var(--line);
+  }
+  .kpi{background:var(--panel); padding:12px 16px 13px;}
+  .kpi .k{font-size:10.5px; color:var(--muted); letter-spacing:.08em; font-weight:600;}
+  .kpi .v{font-size:24px; font-weight:700; letter-spacing:-.01em; margin-top:3px; font-family:var(--mono); line-height:1.1;}
+  .kpi .v small{font-size:11px; font-weight:500; color:var(--muted); margin-left:3px; font-family:inherit;}
+  .kpi .s{font-size:10.5px; color:var(--muted); margin-top:3px;}
+  .kpi.alert{background:#fffafa;}
+  .kpi.alert .v{color:var(--high);}
+
+  .filters{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:10px 18px; background:#f7f9f8; border-bottom:1px solid var(--line);
+    position:sticky; top:52px; z-index:20;
+  }
+  .filters input[type=search], .filters select{
+    font:inherit; font-size:12px; height:30px; padding:0 8px;
+    border:1px solid var(--line); border-radius:2px; background:#fff; color:var(--ink);
+  }
+  .filters input[type=search]{width:250px;}
+  .filters input[type=search]:focus, .filters select:focus{outline:none; border-color:var(--accent);}
+  .chips{display:flex; gap:6px; margin-left:auto;}
+  .chip{
+    font:inherit; font-size:11.5px; padding:0 9px; height:26px; border-radius:2px;
+    border:1px solid var(--line); background:#fff; color:var(--ink-2); cursor:pointer;
+    display:inline-flex; align-items:center; gap:5px;
+  }
+  .chip .n{font-family:var(--mono); font-size:10.5px; color:var(--muted);}
+  .chip.on{background:var(--ink); color:#fff; border-color:var(--ink);}
+  .chip.on .n{color:#a9bcc2;}
+
+  .btn{
+    font:inherit; font-size:12px; padding:0 12px; height:30px; border-radius:2px;
+    border:1px solid var(--line); background:#fff; color:var(--ink); cursor:pointer; white-space:nowrap;
+  }
+  .btn:hover{background:#f4f6f5; border-color:#b9c6c2;}
+  .btn.primary{background:var(--ink); color:#fff; border-color:var(--ink); font-weight:600;}
+  .btn.primary:hover{background:#20363f;}
+  .btn.danger{color:var(--high); border-color:#e4b8b3;}
+  .btn.ghost{border:none; background:transparent; color:var(--muted); font-size:16px; padding:0 6px;}
+
+  .board{
+    display:flex; gap:9px; padding:14px 18px 24px; align-items:flex-start;
+    overflow-x:auto; scroll-snap-type:x proximity;
+  }
+  .col{flex:1 1 190px; min-width:168px; scroll-snap-align:start;}
+  .col-head{
+    display:flex; align-items:center; gap:6px; padding:0 2px 7px;
+    border-bottom:2px solid var(--c); margin-bottom:9px;
+  }
+  .col-head .dot{width:7px;height:7px;border-radius:50%;background:var(--c);}
+  .col-head .nm{font-size:12px; font-weight:700; letter-spacing:.04em;}
+  .col-head .tag2{font-size:9px; color:#8a969b; border:1px solid #dbe2df; border-radius:2px; padding:0 3px;}
+  .col-head .ct{margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--muted);}
+  .col-body{display:flex; flex-direction:column; gap:8px; min-height:40px;}
+  .col-empty{font-size:11px; color:#a7b4b9; padding:14px 0; text-align:center;}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--line);
+    border-radius:2px; padding:9px 10px 8px; cursor:pointer;
+    transition:box-shadow .14s, transform .14s, border-color .14s;
+  }
+  .card:hover{box-shadow:0 4px 14px -6px rgba(19,34,41,.28); transform:translateY(-1px);}
+  .card.high{border-left-color:var(--high);}
+  .card.mid{border-left-color:var(--mid);}
+  .card.low{border-left-color:var(--low);}
+  .card.done{border-left-color:#b6c1c6; opacity:.72;}
+  .c-top{display:flex; align-items:center; gap:6px;}
+  .c-no{font-family:var(--mono); font-size:11px; font-weight:700; color:var(--ink-2);}
+  .c-title{font-size:12.5px; font-weight:700; margin:5px 0 2px; line-height:1.35;}
+  .c-sub{font-size:10.5px; color:var(--muted); font-family:var(--mono);}
+  .c-spec{
+    font-size:10.5px; color:var(--ink-2); margin-top:5px; line-height:1.45;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .bar{height:4px; background:#e6ebe9; border-radius:2px; overflow:hidden; margin:7px 0 4px;}
+  .bar i{display:block; height:100%; background:var(--accent);}
+  .card.high .bar i{background:var(--high);}
+  .card.mid .bar i{background:var(--mid);}
+  .card.done .bar i{background:#9aa8ad;}
+  .c-line{display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--muted);}
+  .c-pct{margin-left:auto; font-family:var(--mono); font-weight:700; color:var(--ink-2);}
+  .c-op{font-size:11px; color:var(--ink); margin-top:5px; font-weight:600;}
+  .c-op span{font-weight:400; color:var(--muted); font-family:var(--mono); font-size:10px; margin-left:4px;}
+  .c-badge{
+    display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:.04em;
+    padding:1px 5px; border-radius:2px; border:1px solid;
+  }
+  .b-high{color:var(--high); border-color:#e8b4ae; background:var(--high-soft);}
+  .b-mid{color:var(--mid); border-color:#e3c49a; background:var(--mid-soft);}
+  .b-low{color:var(--low); border-color:#a8cfb6; background:var(--low-soft);}
+  .b-done{color:var(--done); border-color:#c6d0d4; background:var(--done-soft);}
+  .b-warn{color:#8a4b00; border-color:#e0c08c; background:#fdf1df; margin-top:6px;}
+  .b-side{color:#0369a1; border-color:#a9cbe0; background:#eaf4fb; margin-top:6px;}
+
+  .list-wrap{padding:14px 18px 30px; overflow-x:auto;}
+  table{width:100%; border-collapse:collapse; background:#fff; font-size:12px;}
+  thead th{
+    text-align:left; font-size:10.5px; letter-spacing:.06em; color:var(--muted);
+    padding:9px 10px; border-bottom:1px solid var(--line); background:#f7f9f8; font-weight:700; white-space:nowrap;
+  }
+  tbody td{padding:9px 10px; border-bottom:1px solid #eef1f0; vertical-align:top;}
+  tbody tr:hover{background:#fafbfa;}
+  .mono{font-family:var(--mono);}
+
+  .scrim{
+    position:fixed; inset:0; background:rgba(19,34,41,.35); opacity:0;
+    pointer-events:none; transition:opacity .2s; z-index:40;
+  }
+  .drawer{
+    position:fixed; top:0; right:0; height:100dvh; width:min(540px,94vw);
+    background:#fff; z-index:50; transform:translateX(100%);
+    transition:transform .24s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column;
+    box-shadow:-12px 0 40px -18px rgba(0,0,0,.4);
+  }
+  .d-head{padding:14px 16px; border-bottom:1px solid var(--line); background:var(--ink); color:#fff;}
+  .d-body{overflow-y:auto; flex:1; padding:16px;}
+  .sec-t{
+    font-size:10.5px; letter-spacing:.1em; color:var(--muted); font-weight:700;
+    margin:16px 0 7px; padding-bottom:5px; border-bottom:1px solid #edf0ef;
+  }
+  .sec-t:first-child{margin-top:0;}
+  .spec{display:grid; grid-template-columns:1fr 1fr; gap:8px 12px; font-size:11.5px;}
+  .spec div span{color:var(--muted); font-size:10px; display:block; margin-bottom:1px;}
+
+  .modal{
+    position:fixed; inset:0; z-index:70; background:rgba(19,34,41,.42);
+    display:flex; align-items:center; justify-content:center; padding:16px;
+  }
+  .modal[hidden]{display:none;}
+  .modal-card{
+    background:#fff; width:min(760px,100%); max-height:92dvh;
+    display:flex; flex-direction:column; border-radius:3px; overflow:hidden;
+    box-shadow:0 24px 70px -24px rgba(0,0,0,.55);
+  }
+  .modal-head{padding:12px 16px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px;}
+  .modal-head h3{margin:0; font-size:14px; letter-spacing:.04em;}
+  .modal-body{padding:14px 16px; overflow-y:auto;}
+  .modal-foot{padding:10px 16px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px; background:#fafbfa;}
+  .form-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px 12px;}
+  .fld{display:flex; flex-direction:column; gap:3px;}
+  .fld label{font-size:10.5px; color:var(--muted); letter-spacing:.04em;}
+  .fld input, .fld select{
+    font:inherit; font-size:12px; height:32px; padding:0 8px;
+    border:1px solid var(--line); border-radius:2px; background:#fff; color:var(--ink);
+  }
+  .fld input:focus, .fld select:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-soft);}
+  .fld input.err{border-color:var(--high); background:#fff8f7;}
+  .span2{grid-column:span 2;}
+  .span3{grid-column:span 3;}
+  .checks{display:flex; gap:7px; flex-wrap:wrap;}
+  .trow{
+    display:flex; align-items:center; gap:6px; height:32px; padding:0 8px;
+    border:1px solid var(--line); border-radius:2px; background:#fff;
+  }
+  .trow:has(input:checked){border-color:var(--accent); background:var(--accent-soft);}
+  .trow label{display:inline-flex; align-items:center; gap:5px; font-size:12px; cursor:pointer; color:var(--ink);}
+  .trow input[type=checkbox]{width:14px; height:14px; accent-color:var(--accent); margin:0;}
+  .trow .tq{
+    width:66px; height:24px; font:inherit; font-size:11.5px; font-family:var(--mono);
+    border:1px solid var(--line); border-radius:2px; padding:0 5px; background:#fff;
+  }
+  .trow .tq:disabled{background:#f4f6f5; color:#a7b4b9;}
+  .switch{display:flex; align-items:center; gap:7px; height:32px; font-size:12px;}
+  .switch input{width:15px; height:15px; accent-color:var(--accent);}
+  .hint{grid-column:1/-1; font-size:10.5px; color:var(--muted); margin-top:-2px; line-height:1.5;}
+  .err-msg{grid-column:1/-1; font-size:11.5px; color:var(--high); background:var(--high-soft);
+    border:1px solid #f0c8c4; border-radius:2px; padding:6px 9px;}
+
+  .seg{display:inline-flex; border:1px solid var(--line); border-radius:3px; overflow:hidden; background:#fff;}
+  .seg button{
+    font:inherit; font-size:10.5px; padding:4px 7px; border:0; border-right:1px solid var(--line);
+    background:#fff; color:var(--muted); cursor:pointer; white-space:nowrap;
+  }
+  .seg button:last-child{border-right:0;}
+  .seg button:hover{background:#f5f8f7;}
+  .seg button.on[data-s="wait"]{background:#eef1f2; color:#46596a; font-weight:700;}
+  .seg button.on[data-s="run"]{background:var(--accent-soft); color:var(--accent); font-weight:700;}
+  .seg button.on[data-s="done"]{background:var(--low-soft); color:var(--low); font-weight:700;}
+  .seg.locked{opacity:.5;}
+  .seg.locked button{cursor:not-allowed;}
+  .seg button.on[data-s="open"]{background:var(--mid-soft); color:var(--mid); font-weight:700;}
+  .seg button.on[data-s="closed"]{background:#eef1f2; color:#46596a; font-weight:700;}
+
+  .issue{border-left:2px solid var(--mid); padding:2px 0 2px 9px; margin-bottom:10px; font-size:11.5px;}
+  .issue.is-closed{border-left-color:var(--line);}
+  .issue.is-closed .is-desc{color:var(--muted);}
+  .issue-h{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .issue-h b{font-weight:700;}
+  .xbtn{border:0; background:none; color:var(--muted); cursor:pointer; font-size:15px; line-height:1; padding:0 2px;}
+  .xbtn:hover{color:var(--high);}
+  .if-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  #issueForm{
+    border:1px solid var(--line); border-radius:3px; padding:10px; margin:8px 0 12px; background:#fafbfa;
+  }
+  #issueForm[hidden]{display:none;}
+  #issueForm label{font-size:10px;}
+  #issueForm input, #issueForm select{
+    font:inherit; font-size:11.5px; height:28px; padding:0 6px;
+    border:1px solid var(--line); border-radius:3px; background:#fff; width:100%;
+  }
+  #issueForm input.err{border-color:var(--high); background:#fff7f6;}
+  .status{
+    display:inline-block; font-size:9px; font-weight:700; letter-spacing:.03em;
+    padding:1px 4px; border:1px solid; border-radius:2px; white-space:nowrap;
+  }
+  .s-done{color:#15803d; border-color:#9dd0ae; background:#ecf6ef;}
+  .s-run{color:#0f766e; border-color:#9fcac4; background:#e6f2f0;}
+  .s-wait{color:#6b7c83; border-color:#cfd8d5; background:#f4f6f5;}
+  .board[hidden]{display:none;}
+
+  .rec-head{
+    display:flex; align-items:flex-end; gap:12px; padding:14px 16px 12px;
+    border-bottom:1px solid var(--line); flex-wrap:wrap;
+  }
+  .rec-title{font-size:14px; font-weight:700; letter-spacing:.03em;}
+  .rec-title #recCount{font-family:var(--mono); font-size:12px; color:var(--muted); font-weight:400; margin-left:4px;}
+  .rec-note{display:block; font-size:10.5px; color:var(--muted); font-weight:400; margin-top:3px; letter-spacing:0;}
+  .rec-actions{margin-left:auto; display:flex; gap:8px;}
+  #recTable .on-board{font-size:9px; color:var(--accent); border:1px solid #9fcac4; background:var(--accent-soft);
+    padding:0 4px; border-radius:2px; margin-left:6px; vertical-align:1px;}
+  .col-more{
+    width:100%; margin-top:2px; padding:8px 6px; font:inherit; font-size:10.5px;
+    border:0; border-top:1px dashed var(--line); background:none; color:var(--accent);
+    cursor:pointer; text-align:center; letter-spacing:.02em;
+  }
+  .col-more:hover{background:var(--accent-soft);}
+
+  #toast{
+    position:fixed; left:50%; bottom:26px; transform:translate(-50%,10px);
+    background:#132229; color:#fff; font-size:12px; padding:9px 16px; border-radius:2px;
+    opacity:0; pointer-events:none; transition:.22s; z-index:90;
+  }
+  #toast.on{opacity:1; transform:translate(-50%,0);}
+
+  @media (max-width:900px){
+    .kpis{grid-template-columns:repeat(2,1fr);}
+    .kpi:nth-child(5){grid-column:span 2;}
+    .col{flex:0 0 82vw; min-width:0;}
+    .filters{position:static;}
+    .filters input[type=search]{flex:1 1 100%; width:100%;}
+    .chips{margin-left:0; flex-wrap:wrap;}
+    .form-grid{grid-template-columns:1fr 1fr;}
+    .span2,.span3{grid-column:span 2;}
+    .modal{padding:0;}
+    .modal-card{max-height:100dvh; height:100dvh; border-radius:0;}
+    #btnAdd{flex:1 1 100%;}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><b>彰銓 · 生產進度看板</b><span>CASTER WORKFLOW</span></div>
+  <span class="live"><i></i><span id="liveTxt">即時</span></span>
+  <div class="tb-right">
+    <span class="seg" id="updated">—</span>
+    <span class="seg" id="countdown">—</span>
+    <button class="tbtn" id="btnRefresh">更新</button>
+    <button class="tbtn on" id="btnBoard">看板</button>
+    <button class="tbtn" id="btnList">清單</button>
+    <button class="tbtn" id="btnRec">訂單紀錄</button>
+  </div>
+</header>
+
+<section class="kpis">
+  <div class="kpi">
+    <div class="k">在製派工單</div>
+    <div class="v" id="kpiWip">0</div>
+    <div class="s" id="kpiWipSub">—</div>
+  </div>
+  <div class="kpi">
+    <div class="k">7 日內到期</div>
+    <div class="v" id="kpiDue">0</div>
+    <div class="s">含今天，未結案</div>
+  </div>
+  <div class="kpi alert">
+    <div class="k">逾期／將逾期</div>
+    <div class="v" id="kpiLate">0</div>
+    <div class="s" id="kpiLateSub">—</div>
+  </div>
+  <div class="kpi">
+    <div class="k">平均完成率</div>
+    <div class="v" id="kpiAvg">0<small>%</small></div>
+    <div class="s">依工時加權</div>
+  </div>
+  <div class="kpi">
+    <div class="k">準時達交率</div>
+    <div class="v" id="kpiOtd">0<small>%</small></div>
+    <div class="s" id="kpiOtdSub">—</div>
+  </div>
+</section>
+
+<div class="filters">
+  <input type="search" id="fQ" placeholder="搜尋 單號／代碼／訂單／腳架">
+  <select id="fCust"><option value="">全部客戶</option></select>
+  <select id="fOwner"><option value="">全部負責人</option></select>
+  <div class="chips" id="chips">
+    <button class="chip on" data-risk="">全部 <span class="n" id="cAll">0</span></button>
+    <button class="chip" data-risk="high">高風險 <span class="n" id="cHigh">0</span></button>
+    <button class="chip" data-risk="mid">注意 <span class="n" id="cMid">0</span></button>
+    <button class="chip" data-risk="low">正常 <span class="n" id="cLow">0</span></button>
+  </div>
+  <button class="btn primary" id="btnAdd">＋ 新增派工單</button>
+  <button class="btn" id="btnReset" title="清除本機資料，回到示範資料">重置</button>
+</div>
+
+<main>
+  <div class="board" id="board"></div>
+  <div class="list-wrap" id="listView" hidden>
+    <table id="listTable">
+      <thead>
+        <tr>
+          <th>派工單</th><th>客戶代碼</th><th>品名</th><th>數量</th>
+          <th>當前流程</th><th>完成</th><th>預交</th><th>風險</th><th>負責人</th>
+        </tr>
+      </thead>
+      <tbody id="listBody"></tbody>
+    </table>
+  </div>
+
+  <div class="list-wrap" id="recView" hidden>
+    <div class="rec-head">
+      <div class="rec-title">訂單紀錄 <span id="recCount">—</span>
+        <span class="rec-note">看板只留最近 5 張結案，其餘集中在這裡</span></div>
+      <div class="rec-actions">
+        <button class="btn" id="btnCsv">匯出 CSV</button>
+        <button class="btn primary" id="btnSync">同步到 Google Sheets</button>
+      </div>
+    </div>
+    <table id="recTable">
+      <thead>
+        <tr>
+          <th>結案日</th><th>派工單</th><th>客戶代碼</th><th>品名</th>
+          <th>型式 · 數量</th><th>預交</th><th>交期結果</th><th>工序</th>
+        </tr>
+      </thead>
+      <tbody id="recBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <div class="d-head" id="dHead"></div>
+  <div class="d-body" id="drawerBody"></div>
+</aside>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3>新增派工單</h3>
+      <span style="font-size:10.5px;color:var(--muted);">建立後直接在看板跟進</span>
+      <button class="btn ghost" id="btnCloseModal" style="margin-left:auto;">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="fld"><label>派工單號 *</label><input id="fNo" placeholder="001376"></div>
+        <div class="fld"><label>訂單號</label><input id="fOrder" placeholder="YM092426"></div>
+        <div class="fld"><label>製表日 *</label><input id="fDate" type="date"></div>
+
+        <div class="fld"><label>客戶代碼 *</label><input id="fCode" placeholder="B033-YM"></div>
+        <div class="fld span2"><label>品名（選填，空白自動組合）</label><input id="fName" placeholder="4×1 TPR 活動腳輪"></div>
+
+        <div class="fld"><label>腳架 *</label><input id="fFork" placeholder="425B"></div>
+        <div class="fld"><label>電鍍顏色</label>
+          <select id="fPlating">
+            <option value="">—</option><option>金</option><option>銀</option><option>黑</option><option>鋅</option><option>其他</option>
+          </select>
+        </div>
+        <div class="fld"><label>螺絲規格／四角板</label><input id="fScrew" placeholder="M12×25"></div>
+
+        <div class="fld"><label>上皿（編號）</label><input id="fUp" placeholder="15"></div>
+        <div class="fld"><label>下皿（編號）</label><input id="fDown" placeholder="30"></div>
+        <div class="fld"><label>輪子規格 *</label><input id="fWheel" placeholder="4×1"></div>
+
+        <div class="fld"><label>材質</label>
+          <select id="fMat"><option value="">—</option><option>TPR</option><option>PU</option><option>PP</option><option>尼龍</option><option>橡膠</option><option>其他</option></select>
+        </div>
+        <div class="fld"><label>顏色</label><input id="fColor" placeholder="內黑"></div>
+        <div class="fld"><label>數量 *（自動加總）</label>
+          <div style="display:flex; gap:5px;">
+            <input id="fQty" placeholder="700" style="flex:1; min-width:0;">
+            <select id="fUnit" style="width:58px;"><option>只</option><option>組</option></select>
+          </div>
+        </div>
+
+        <div class="fld span3"><label>型式與數量 *（勾選後填各自數量）</label>
+          <div class="checks" id="fTypes">
+            <div class="trow"><label><input type="checkbox" value="活動">活動</label><input class="tq" data-t="活動" type="number" min="0" step="10" placeholder="0" disabled></div>
+            <div class="trow"><label><input type="checkbox" value="固定">固定</label><input class="tq" data-t="固定" type="number" min="0" step="10" placeholder="0" disabled></div>
+            <div class="trow"><label><input type="checkbox" value="側煞">側煞</label><input class="tq" data-t="側煞" type="number" min="0" step="10" placeholder="0" disabled></div>
+            <div class="trow"><label><input type="checkbox" value="前煞">前煞</label><input class="tq" data-t="前煞" type="number" min="0" step="10" placeholder="0" disabled></div>
+            <div class="trow"><label><input type="checkbox" value="前雙煞">前雙煞</label><input class="tq" data-t="前雙煞" type="number" min="0" step="10" placeholder="0" disabled></div>
+          </div>
+        </div>
+
+        <div class="fld"><label>客戶（選填）</label><input id="fCust2" placeholder="—"></div>
+        <div class="fld"><label>預交日 *</label><input id="fDue" type="date"></div>
+        <div class="fld"><label>預計完成</label><input id="fForecast" type="date"></div>
+
+        <div class="fld span2"><label>包裝方式</label><input id="fPack" placeholder="全檢 · 25 只入袋 · 貼標＋大袋 · 封 H 型膠帶"></div>
+        <div class="fld"><label>箱數</label><input id="fCartons" type="number" min="0" placeholder="35"></div>
+
+        <div class="fld"><label>製程</label>
+          <div class="switch">
+            <input type="checkbox" id="fSpecial">
+            <label for="fSpecial" style="font-size:12px; color:var(--ink);">需特殊加工（熱處理／震動）</label>
+          </div>
+        </div>
+        <div class="fld span2"><label>負責人 *</label><input id="fOwner2" placeholder="陳建宏"></div>
+
+        <div class="hint">流程：備料（鐵件）→ 沖壓 →〔特殊加工〕→ 電鍍 → 腳架組裝 → 成品組裝 → 檢驗 → 包裝出貨；「採購（輪子）」是並行支線，不勾特殊加工就是沖壓後直接電鍍。</div>
+        <div class="err-msg" id="formErr" hidden></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="btnCancel">取消</button>
+      <button class="btn primary" id="btnCreate">建立派工單</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+
+/* ============================================================
+   流程（依作業流程圖）
+   主線：備料(鐵件) → 沖壓 →〔特殊加工〕→ 電鍍 → 腳架組裝 → 成品組裝 → 檢驗 → 包裝出貨
+   支線：採購(輪子) ──────────────→ 成品組裝（並行，缺料會擋住成品組裝）
+   特殊加工為條件式：一般件沖壓後直接電鍍
+   ============================================================ */
+const STAGES = [
+  {key:'mat',      name:'備料／採購', color:'#64748b', note:'雙線'},
+  {key:'press',    name:'沖壓',       color:'#0f766e'},
+  {key:'special',  name:'特殊加工',   color:'#a16207', note:'條件式'},
+  {key:'plate',    name:'電鍍',       color:'#4338ca'},
+  {key:'fork',     name:'腳架組裝',   color:'#1d4ed8'},
+  {key:'assemble', name:'成品組裝',   color:'#0e7490'},
+  {key:'inspect',  name:'檢驗',       color:'#7c3aed'},
+  {key:'pack',     name:'包裝出貨',   color:'#15803d'},
+  {key:'closed',   name:'結案',       color:'#556770'}
+];
+const SPECIAL_STAGE = 'special';
+
+/* 示範資料：op = [工序, 階段, 工時, 完成%, 計畫起, 計畫迄, 實際起, 實際迄, 負責人, 備註, 支線?] */
+const R = [
+  {
+    no:'001367', order:'YM092426', code:'B033-YM',
+    fork:'425B', plating:'金', screw:'M12×25', up:'15', down:'30',
+    wheel:'4×1', material:'TPR', color:'內黑', types:['活動','側煞'],
+    typeQty:{'活動':350,'側煞':350}, qty:700, cartons:35, unit:'只',
+    packing:'全檢 · 25 只入袋 · 貼標＋大袋 · 排 4 層 · 封 H 型膠帶',
+    customer:'', owner:'陳建宏', created:'2026-09-24', due:'2026-11-06', forecast:'2026-11-08',
+    ops:[
+      ['備料（鐵件）','mat',8,100,'09-24','09-26','09-24','09-26','王淑芬',''],
+      ['沖壓','press',24,100,'09-27','10-03','09-27','10-04','李宗翰',''],
+      ['電鍍（委外）','plate',12,100,'10-05','10-09','10-05','10-10','委外電鍍廠','回廠延 1 日'],
+      ['腳架組裝','fork',18,100,'10-28','11-01','10-29','11-01','陳建宏',''],
+      ['成品組裝','assemble',20,55,'11-02','11-06','11-02','','陳建宏',''],
+      ['檢驗','inspect',10,0,'11-06','11-07','','','品保',''],
+      ['包裝出貨','pack',8,0,'11-07','11-08','','','包裝組',''],
+      ['採購（輪子）','purchase',16,100,'09-24','09-30','09-24','09-29','採購','','side']
+    ],
+    issues:[{date:'10-10', op:'電鍍', desc:'電鍍回廠延遲 1 日，色差需重工 2 件', days:1, action:'補件隨下批回廠，不動主排程', owner:'委外電鍍廠', status:'已結案'}],
+    materials:[{item:'輪子 4×1 TPR 內黑', need:700, got:700, eta:'09-29', vendor:'採購', note:'已入庫'}],
+    logs:[
+      {date:'11-02', by:'陳建宏', summary:'腳架組裝完成，轉成品組裝', todo:'11-05 前完成 700 只'},
+      {date:'11-05', by:'陳建宏', summary:'成品組裝完成 55%，缺 2 名人力', todo:'11-08 前補齊'}
+    ]
+  },
+  {
+    no:'001368', order:'YM092431', code:'B045-YM',
+    fork:'500B', plating:'銀', screw:'M12×25', up:'18', down:'32',
+    wheel:'5×2', material:'PU', color:'灰', types:['固定'],
+    typeQty:{'固定':600}, qty:600, cartons:30, unit:'只',
+    packing:'全檢 · 20 只入袋 · 貼標＋大袋 · 封 H 型膠帶',
+    customer:'', owner:'張美玲', created:'2026-11-01', due:'2026-11-14', forecast:'2026-11-13',
+    ops:[
+      ['備料（鐵件）','mat',8,100,'11-01','11-02','11-01','11-02','王淑芬',''],
+      ['沖壓','press',24,30,'11-03','11-08','11-03','','李宗翰','模具換線中'],
+      ['電鍍（委外）','plate',12,0,'11-09','11-11','','','委外電鍍廠',''],
+      ['腳架組裝','fork',18,0,'11-12','11-14','','','陳建宏',''],
+      ['成品組裝','assemble',20,0,'11-14','11-16','','','陳建宏',''],
+      ['檢驗','inspect',10,0,'11-16','11-17','','','品保',''],
+      ['包裝出貨','pack',8,0,'11-17','11-18','','','包裝組',''],
+      ['採購（輪子）','purchase',16,60,'11-01','11-08','11-01','','採購','廠商分批交','side']
+    ],
+    issues:[],
+    materials:[{item:'輪子 5×2 PU 灰', need:600, got:360, eta:'11-09', vendor:'採購', note:'其餘 11-09 到'}],
+    logs:[{date:'11-05', by:'張美玲', summary:'沖壓 30%，輪子到 360 只', todo:'追 11-09 第二批'}]
+  },
+  {
+    no:'001369', order:'YM092415', code:'A012-YM',
+    fork:'300A', plating:'鋅', screw:'M10×25', up:'12', down:'24',
+    wheel:'3×1.25', material:'PP', color:'黑', types:['活動'],
+    typeQty:{'活動':1200}, qty:1200, cartons:48, unit:'只',
+    packing:'全檢 · 25 只入袋 · 貼標＋大袋 · 封 H 型膠帶',
+    customer:'', owner:'黃振業', created:'2026-10-01', due:'2026-10-28', forecast:'2026-11-04',
+    ops:[
+      ['備料（鐵件）','mat',8,100,'10-01','10-02','10-01','10-02','王淑芬',''],
+      ['沖壓','press',24,100,'10-03','10-10','10-03','10-09','李宗翰',''],
+      ['電鍍（委外）','plate',12,100,'10-11','10-15','10-12','10-16','委外電鍍廠',''],
+      ['腳架組裝','fork',18,100,'10-20','10-26','10-21','10-27','陳建宏',''],
+      ['成品組裝','assemble',20,100,'10-28','11-01','10-28','11-01','陳建宏',''],
+      ['檢驗','inspect',10,100,'11-02','11-03','11-02','11-03','品保',''],
+      ['包裝出貨','pack',8,55,'11-03','11-06','11-04','','包裝組','人力不足'],
+      ['採購（輪子）','purchase',16,100,'10-01','10-06','10-01','10-05','採購','','side']
+    ],
+    issues:[{date:'11-04', op:'包裝出貨', desc:'包裝人力不足，進度落後 2 日', days:2, action:'調支援 1 人，11/06 完成', owner:'包裝組', status:'處理中'}],
+    materials:[{item:'輪子 3×1.25 PP 黑', need:1200, got:1200, eta:'10-05', vendor:'採購', note:'已入庫'}],
+    logs:[
+      {date:'11-03', by:'黃振業', summary:'全檢完成，開始包裝', todo:'11-06 出貨'},
+      {date:'11-05', by:'黃振業', summary:'包裝 55%，已調支援', todo:'11-06 完成'}
+    ]
+  },
+  {
+    no:'001370', order:'YM092440', code:'C088-YM',
+    fork:'600C', plating:'金', screw:'M12×30', up:'20', down:'36',
+    wheel:'6×2', material:'尼龍', color:'白', types:['側煞'],
+    typeQty:{'側煞':240}, qty:240, cartons:24, unit:'只',
+    packing:'全檢 · 10 只入袋 · 貼標＋大袋 · 封 H 型膠帶',
+    customer:'', owner:'李宗翰', created:'2026-10-28', due:'2026-11-10', forecast:'2026-11-10',
+    ops:[
+      ['備料（鐵件）','mat',8,100,'10-28','10-29','10-28','10-29','王淑芬',''],
+      ['沖壓','press',24,100,'10-30','11-02','10-30','11-01','李宗翰',''],
+      ['電鍍（委外）','plate',12,40,'11-02','11-05','11-03','','委外電鍍廠',''],
+      ['腳架組裝','fork',18,0,'11-05','11-07','','','陳建宏',''],
+      ['成品組裝','assemble',20,0,'11-07','11-09','','','陳建宏',''],
+      ['檢驗','inspect',10,0,'11-09','11-10','','','品保',''],
+      ['包裝出貨','pack',8,0,'11-10','11-11','','','包裝組',''],
+      ['採購（輪子）','purchase',16,100,'10-28','11-02','10-28','11-01','採購','','side']
+    ],
+    issues:[],
+    materials:[{item:'輪子 6×2 尼龍 白', need:240, got:240, eta:'11-01', vendor:'採購', note:'已入庫'}],
+    logs:[{date:'11-05', by:'李宗翰', summary:'電鍍 40%，11/05 回廠', todo:'回廠後排腳架組裝'}]
+  },
+  {
+    no:'001371', order:'YM092442', code:'B033-YM',
+    fork:'425B', plating:'金', screw:'M12×25', up:'15', down:'30',
+    wheel:'4×1', material:'TPR', color:'內黑', types:['活動'],
+    typeQty:{'活動':500}, qty:500, cartons:25, unit:'只',
+    packing:'全檢 · 25 只入袋 · 貼標＋大袋 · 封 H 型膠帶',
+    customer:'', owner:'黃振業', created:'2026-11-05', due:'2026-11-20', forecast:'2026-11-19',
+    ops:[
+      ['備料（鐵件）','mat',8,0,'11-05','11-07','','','王淑芬','等待鋼板'],
+      ['沖壓','press',24,0,'11-08','11-12','','','李宗翰',''],
+      ['電鍍（委外）','plate',12,0,'11-13','11-15','','','委外電鍍廠',''],
+      ['腳架組裝','fork',18,0,'11-16','11-18','','','陳建宏',''],
+      ['成品組裝','assemble',20,0,'11-18','11-20','','','陳建宏',''],
+      ['檢驗','inspect',10,0,'11-20','11-21','','','品保',''],
+      ['包裝出貨','pack',8,0,'11-21','11-22','','','包裝組',''],
+      ['採購（輪子）','purchase',16,0,'11-05','11-11','','','採購','','side']
+    ],
+    issues:[],
+    materials:[{item:'鋼板 SPCC 1.6t', need:1, got:0, eta:'11-07', vendor:'—', note:'待進料'},
+               {item:'輪子 4×1 TPR 內黑', need:500, got:0, eta:'11-11', vendor:'採購', note:'下單中'}],
+    logs:[{date:'11-05', by:'黃振業', summary:'開單，材料未到', todo:'11-07 追鋼板進料'}]
+  },
+  {
+    no:'001372', order:'YM092406', code:'D100-W',
+    fork:'800D', plating:'黑', screw:'M16×40', up:'25', down:'45',
+    wheel:'8×2', material:'橡膠', color:'黑', types:['固定'],
+    typeQty:{'固定':120}, qty:120, cartons:12, unit:'只',
+    packing:'全檢 · 10 只入箱 · 貼標 · 封 H 型膠帶',
+    customer:'', owner:'張美玲', created:'2026-10-12', due:'2026-11-04', forecast:'2026-11-02',
+    ops:[
+      ['備料（鐵件）','mat',8,100,'10-12','10-13','10-12','10-13','王淑芬',''],
+      ['特殊加工（熱處理）','special',20,100,'10-14','10-18','10-14','10-19','熱處理廠',''],
+      ['沖壓','press',24,100,'10-19','10-24','10-19','10-23','李宗翰',''],
+      ['電鍍（委外）','plate',12,100,'10-25','10-28','10-25','10-27','委外電鍍廠',''],
+      ['腳架組裝','fork',18,100,'10-29','11-01','10-29','11-01','陳建宏',''],
+      ['成品組裝','assemble',20,100,'11-02','11-04','11-02','11-03','陳建宏',''],
+      ['檢驗','inspect',10,90,'11-04','11-05','11-04','','品保','抽樣中'],
+      ['包裝出貨','pack',8,0,'11-05','11-06','','','包裝組',''],
+      ['採購（輪子）','purchase',16,60,'10-12','10-20','10-12','','採購','大輪缺料','side']
+    ],
+    issues:[{date:'11-05', op:'檢驗', desc:'輪子僅到 72 只，其餘缺料；成品無法齊套', days:2, action:'協調廠商 11/07 補 48 只', owner:'採購', status:'處理中'}],
+    materials:[{item:'輪子 8×2 橡膠 黑', need:120, got:72, eta:'11-07', vendor:'採購', note:'缺 48 只'}],
+    logs:[{date:'11-05', by:'張美玲', summary:'檢驗 90%，輪子缺 48 只', todo:'11-07 追料並補齊'}]
+  },
+  {
+    no:'001373', order:'YM092448', code:'B050-YM',
+    fork:'500B', plating:'金', screw:'M12×25', up:'18', down:'32',
+    wheel:'5×1.5', material:'TPR', color:'藍', types:['前煞'],
+    typeQty:{'前煞':300}, qty:300, cartons:15, unit:'只',
+    packing:'全檢 · 20 只入袋 · 貼標＋大袋 · 封 H 型膠帶',
+    customer:'', owner:'李宗翰', created:'2026-10-30', due:'2026-11-18', forecast:'2026-11-17',
+    ops:[
+      ['備料（鐵件）','mat',8,100,'10-30','10-31','10-30','10-31','王淑芬',''],
+      ['沖壓','press',24,100,'11-01','11-04','11-01','11-03','李宗翰',''],
+      ['特殊加工（震動研磨）','special',20,50,'11-04','11-08','11-04','','震動組','客戶要求去毛邊'],
+      ['電鍍（委外）','plate',12,0,'11-09','11-11','','','委外電鍍廠',''],
+      ['腳架組裝','fork',18,0,'11-12','11-14','','','陳建宏',''],
+      ['成品組裝','assemble',20,0,'11-14','11-16','','','陳建宏',''],
+      ['檢驗','inspect',10,0,'11-16','11-17','','','品保',''],
+      ['包裝出貨','pack',8,0,'11-17','11-18','','','包裝組',''],
+      ['採購（輪子）','purchase',16,100,'10-30','11-03','10-30','11-02','採購','','side']
+    ],
+    issues:[],
+    materials:[{item:'輪子 5×1.5 TPR 藍', need:300, got:300, eta:'11-02', vendor:'採購', note:'已入庫'}],
+    logs:[{date:'11-05', by:'李宗翰', summary:'震動研磨 50%', todo:'11-08 完成轉電鍍'}]
+  },
+  {
+    no:'001374', order:'YM092452', code:'A008-YM',
+    fork:'300A', plating:'鋅', screw:'M10×20', up:'12', down:'24',
+    wheel:'3×1.25', material:'PU', color:'紅', types:['活動'],
+    typeQty:{'活動':800}, qty:800, cartons:32, unit:'只',
+    packing:'全檢 · 25 只入袋 · 貼標＋大袋 · 封 H 型膠帶',
+    customer:'', owner:'黃振業', created:'2026-11-02', due:'2026-11-25', forecast:'2026-11-25',
+    ops:[
+      ['備料（鐵件）','mat',8,100,'11-02','11-03','11-02','11-03','王淑芬',''],
+      ['沖壓','press',24,15,'11-04','11-10','11-04','','李宗翰',''],
+      ['電鍍（委外）','plate',12,0,'11-11','11-13','','','委外電鍍廠',''],
+      ['腳架組裝','fork',18,0,'11-14','11-18','','','陳建宏',''],
+      ['成品組裝','assemble',20,0,'11-18','11-21','','','陳建宏',''],
+      ['檢驗','inspect',10,0,'11-21','11-23','','','品保',''],
+      ['包裝出貨','pack',8,0,'11-23','11-25','','','包裝組',''],
+      ['採購（輪子）','purchase',16,20,'11-02','11-08','11-02','','採購','','side']
+    ],
+    issues:[],
+    materials:[{item:'輪子 3×1.25 PU 紅', need:800, got:0, eta:'11-12', vendor:'採購', note:'交期較長'}],
+    logs:[{date:'11-05', by:'黃振業', summary:'沖壓 15%，輪子未到', todo:'11-12 追輪子'}]
+  },
+  {
+    no:'001375', order:'YM092455', code:'C070-YM',
+    fork:'600C', plating:'黑', screw:'M12×30', up:'20', down:'36',
+    wheel:'6×1.5', material:'PU', color:'灰', types:['側煞','前煞'],
+    typeQty:{'側煞':100,'前煞':100}, qty:200, cartons:20, unit:'只',
+    packing:'全檢 · 10 只入袋 · 貼標＋大袋 · 封 H 型膠帶',
+    customer:'', owner:'陳建宏', created:'2026-10-26', due:'2026-11-09', forecast:'2026-11-09',
+    ops:[
+      ['備料（鐵件）','mat',8,100,'10-26','10-27','10-26','10-27','王淑芬',''],
+      ['沖壓','press',24,100,'10-28','10-31','10-28','10-30','李宗翰',''],
+      ['電鍍（委外）','plate',12,100,'11-01','11-03','11-01','11-02','委外電鍍廠',''],
+      ['腳架組裝','fork',18,70,'11-04','11-07','11-04','','陳建宏',''],
+      ['成品組裝','assemble',20,0,'11-07','11-09','','','陳建宏',''],
+      ['檢驗','inspect',10,0,'11-09','11-10','','','品保',''],
+      ['包裝出貨','pack',8,0,'11-10','11-11','','','包裝組',''],
+      ['採購（輪子）','purchase',16,30,'10-26','11-01','10-26','','採購','煞車輪缺料','side']
+    ],
+    issues:[{date:'11-03', op:'腳架組裝', desc:'煞車輪到料僅 60 只，可能影響成品組裝', days:1, action:'11/07 前補足 140 只', owner:'採購', status:'處理中'}],
+    materials:[{item:'輪子 6×1.5 PU 灰（含煞車）', need:200, got:60, eta:'11-07', vendor:'採購', note:'缺 140 只'}],
+    logs:[{date:'11-05', by:'陳建宏', summary:'腳架組裝 70%，等煞車輪', todo:'11-07 追料'}]
+  },
+  {
+    no:'001360', order:'YM092390', code:'B033-YM',
+    fork:'425B', plating:'金', screw:'M12×25', up:'15', down:'30',
+    wheel:'4×1', material:'TPR', color:'內黑', types:['側煞'],
+    typeQty:{'側煞':350}, qty:350, cartons:35, unit:'只',
+    packing:'全檢 · 10 只入袋 · 貼標＋大袋 · 封 H 型膠帶',
+    customer:'', owner:'陳建宏', created:'2026-09-20', due:'2026-10-31', forecast:'2026-10-30',
+    ops:[
+      ['備料（鐵件）','mat',8,100,'09-20','09-22','09-20','09-22','王淑芬',''],
+      ['沖壓','press',24,100,'09-23','09-28','09-23','09-27','李宗翰',''],
+      ['電鍍（委外）','plate',12,100,'09-29','10-02','09-29','10-02','委外電鍍廠',''],
+      ['腳架組裝','fork',18,100,'10-15','10-19','10-16','10-19','陳建宏',''],
+      ['成品組裝','assemble',20,100,'10-23','10-26','10-23','10-25','陳建宏',''],
+      ['檢驗','inspect',10,100,'10-27','10-28','10-27','10-28','品保',''],
+      ['包裝出貨','pack',8,100,'10-29','10-30','10-29','10-30','包裝組',''],
+      ['採購（輪子）','purchase',16,100,'09-20','09-26','09-20','09-25','採購','','side']
+    ],
+    issues:[],
+    materials:[{item:'輪子 4×1 TPR 內黑', need:350, got:350, eta:'09-25', vendor:'採購', note:'已入庫'}],
+    logs:[{date:'10-30', by:'陳建宏', summary:'出貨完成，結案', todo:'—'}]
+  }
+];
+
+/* 準時達交：近 30 日（示範值） */
+const HISTORY = { total: 18, onTime: 15, period: '2026-10-07~2026-11-05' };
+
+/* ---------------- 時鐘（示範用；接正式資料改為 () => new Date()） ---------------- */
+const BOOT = Date.now();
+const BASE = Date.parse('2026-11-06T09:20:00+08:00');
+const now = () => new Date(BASE + (Date.now() - BOOT));
+
+const dayNum = s => { const [y,m,d] = s.split('-').map(Number); return Date.UTC(y,m-1,d)/864e5; };
+const todayNum = () => { const d = now(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())/864e5; };
+const isoNum = n => new Date(n*864e5).toISOString().slice(0,10);
+const isoDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fmtTime = t => { const d = new Date(t); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`; };
+const shortDate = s => s ? s.slice(5).replace('-','/') : '—';
+
+/* ---------------- 設定（接 Google Sheets 時填入） ---------------- */
+const CFG = {
+  endpoint: '',        // Apps Script doGet?action=board（讀看板資料）
+  recordEndpoint: '',  // Apps Script doPost（訂單紀錄歸檔）
+  pollSeconds: 30
+};
+
+/* ---------------- 狀態 ---------------- */
+const STORE_KEY = 'board.orders.v3';
+const state = { q:'', cust:'', owner:'', risk:'', view:'board' };
+let flashSet = new Set();
+let lastUpdated = now();
+
+const productName = o => o.name || `${o.wheel} ${o.material} ${(o.types||[]).join('+')}腳輪`;
+const qtyText = r => `${r.qty} ${r.unit||'只'}${r.cartons ? ' / ' + r.cartons + ' 箱' : ''}`;
+const typeText = r => (r.types||[]).map(t=>{
+  const q = r.typeQty && r.typeQty[t] != null ? r.typeQty[t] : null;
+  return q != null ? `${t} ${q}` : t;
+}).join(' · ');
+const stageName = k => (STAGES.find(s=>s.key===k)||{}).name || '—';
+
+function normalizeQty(o){
+  if(!o.typeQty || !Object.keys(o.typeQty).length){
+    if((o.types||[]).length === 1) o.typeQty = { [o.types[0]]: o.qty };
+    else o.typeQty = {};
+  }
+  return o;
+}
+
+function normalizeOrder(r){
+  // 舊資料有 MM-DD 格式，統一補成 YYYY-MM-DD
+  const yr = (r.created && r.created.length === 10) ? Number(r.created.slice(0,4)) : 2026;
+  const fd = s => (typeof s === 'string' && /^\d{2}-\d{2}$/.test(s)) ? `${yr}-${s}` : s;
+
+  return {
+    ...r,
+    created: fd(r.created), due: fd(r.due), forecast: fd(r.forecast),
+    custom: !!r.custom,
+    ops: (r.ops||[]).map(o => Array.isArray(o)
+      ? { name:o[0], stage:o[1], hours:o[2], pct:o[3], planS:fd(o[4]), planE:fd(o[5]),
+          actS:fd(o[6]), actE:fd(o[7]), owner:o[8]||'', note:o[9]||'', lane:o[10]==='side'?'side':'main' }
+      : { lane:'main', ...o,
+          planS:fd(o.planS), planE:fd(o.planE), actS:fd(o.actS), actE:fd(o.actE) }),
+    issues: r.issues||[], materials: r.materials||[], logs: r.logs||[],
+    updated: r.updated ? new Date(r.updated) : now()
+  };
+}
+
+/* 結案紀錄示範（讓「看板只留 5 張、其餘轉紀錄」看得到效果） */
+function makeClosedSeeds(){
+  const base = [
+    ['備料（鐵件）','mat',8],['沖壓','press',24],['電鍍（委外）','plate',12],
+    ['腳架組裝','fork',18],['成品組裝','assemble',20],['檢驗','inspect',10],['包裝出貨','pack',8]
+  ];
+  const list = [
+    ['001341','YM091705','A008-YM','3×1.25','PU','紅',['活動'],{'活動':600},30,'2026-09-15','2026-09-30','2026-09-28','陳建宏'],
+    ['001344','YM091712','B033-YM','4×1','TPR','內黑',['側煞'],{'側煞':400},40,'2026-09-18','2026-10-02','2026-10-01','李宗翰'],
+    ['001348','YM091730','B045-YM','5×2','PU','灰',['固定'],{'固定':500},25,'2026-09-24','2026-10-08','2026-10-09','黃振業'],
+    ['001351','YM091806','C088-YM','6×2','尼龍','白',['側煞','前煞'],{'側煞':150,'前煞':150},15,'2026-09-28','2026-10-12','2026-10-12','張美玲'],
+    ['001353','YM091821','A012-YM','3×1.25','PP','黑',['活動'],{'活動':1000},50,'2026-10-01','2026-10-16','2026-10-16','陳建宏'],
+    ['001357','YM091902','B050-YM','5×1.5','TPR','藍',['前煞'],{'前煞':240},12,'2026-10-06','2026-10-21','2026-10-22','林志明']
+  ];
+
+  return list.map(([no,order,code,wheel,material,color,types,typeQty,cartons,created,due,closed,owner])=>{
+    const s0 = dayNum(created), c0 = dayNum(closed);
+    const span = Math.max(base.length, c0 - s0 + 1);
+
+    const ops = base.map(([name,stage,hours],i)=>{
+      const ps = s0 + Math.floor(i*span/base.length);
+      const pe = s0 + Math.floor((i+1)*span/base.length) - 1;
+      const last = i === base.length - 1;
+      return [name, stage, hours, 100, isoNum(ps), isoNum(pe), isoNum(ps), isoNum(last ? c0 : pe), owner, ''];
+    });
+    ops.push(['採購（輪子）','purchase',16,100,isoNum(s0),isoNum(s0+6),isoNum(s0),isoNum(s0+5),'採購','','side']);
+
+    const qty = Object.values(typeQty).reduce((a,b)=>a+b,0);
+
+    return {
+      no, order, code, fork:'425B', plating:'金', screw:'M12×25', up:'15', down:'30',
+      wheel, material, color, types, typeQty, qty, unit:'只', cartons, customer:'', owner,
+      created, due, forecast: closed,
+      packing:'全檢 · 25 只入袋 · 貼標＋大袋',
+      ops, issues:[], materials:[],
+      logs:[{ date: closed.slice(5), by: owner, summary:'出貨完成，結案', todo:'—' }],
+      custom:false
+    };
+  });
+}
+
+function seedOrders(){
+  return [...R, ...makeClosedSeeds()].map(normalizeOrder);
+}
+function saveOrders(){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(orders.map(o=>({
+      ...o, updated: o.updated instanceof Date ? o.updated.toISOString() : o.updated
+    }))));
+  }catch(e){}
+}
+function loadOrders(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      const list = JSON.parse(raw);
+      if(Array.isArray(list) && list.length) return list.map(normalizeOrder);
+    }
+  }catch(e){}
+  const seed = seedOrders();
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(seed.map(o=>({...o, updated:o.updated.toISOString()})))); }catch(e){}
+  return seed;
+}
+
+let orders = loadOrders();
+orders.forEach(normalizeQty);
+
+/* ---------------- 推導 ---------------- */
+function derive(o){
+  const ops = o.ops;
+  const total = ops.reduce((s,x)=>s+x.hours,0) || 1;
+  const doneH = ops.reduce((s,x)=>s + x.hours*(x.pct/100), 0);
+  const pct = Math.round(doneH/total*100);
+
+  const mainOps = ops.filter(x=>x.lane !== 'side');
+  const cur = mainOps.find(x=>x.pct < 100);
+
+  const sideOps = ops.filter(x=>x.lane === 'side');
+  const wheelsOk = sideOps.every(x=>x.pct >= 100);
+
+  const idxOf = k => STAGES.findIndex(s=>s.key === k);
+  const asmIdx = idxOf('assemble');
+  // 成品組裝與採購（輪子）都完成，才放行檢驗
+  const asmComplete = mainOps.every(o => idxOf(o.stage) > asmIdx || o.pct >= 100);
+  const blocked = !wheelsOk && asmComplete;
+
+  let stage = cur ? cur.stage : 'closed';
+  const naturalStage = stage;                // 未考慮閘門時應該到的位置
+  if(blocked) stage = 'assemble';            // 卡在成品組裝，不放行檢驗
+
+  // 未結案異常 → 卡住該工序所屬階段，不得往下走
+  let holdStage = null;
+  (o.issues || []).filter(i=>i.status !== '已結案').forEach(it=>{
+    const op = o.ops.find(x=>x.name === it.op);
+    const st = op ? op.stage : (cur ? cur.stage : null);
+    if(!st || st === 'closed') return;
+    if(holdStage === null || idxOf(st) < idxOf(holdStage)) holdStage = st;
+  });
+  const issueHold = holdStage !== null && idxOf(naturalStage) > idxOf(holdStage);
+  if(issueHold) stage = holdStage;
+
+  const curOp = issueHold ? '異常未結案'
+              : blocked  ? '等待輪子到料'
+              : (cur ? cur.name : '已結案');
+
+  const dueIn = dayNum(o.due) - todayNum();
+  const fcIn = dayNum(o.forecast || o.due) - todayNum();
+  const openIssue = (o.issues||[]).some(i=>i.status !== '已結案');
+
+  let risk;
+  if(stage === 'closed')       risk = 'done';
+  else if(dueIn < 0)           risk = 'high';
+  else if(dayNum(o.forecast || o.due) > dayNum(o.due)) risk = 'high';
+  else if(blocked)             risk = 'mid';
+  else if(openIssue)           risk = 'mid';
+  else if(dueIn <= 3)          risk = 'mid';
+  else                         risk = 'low';
+
+  if(blocked && risk === 'low') risk = 'mid';
+
+  // 結案時間：最後一道工序的實際完成日（無資料則取最後更新）
+  const acts = ops.map(x=>x.actE).filter(Boolean).sort();
+  const closedAt = stage === 'closed' ? (acts.length ? acts[acts.length-1] : isoDate(o.updated || now())) : '';
+
+  return {...o, pct, stage, curOp, closedAt, dueIn, fcIn, wheelsOk, blocked, issueHold, risk, openIssue};
+}
+
+let rows = orders.map(derive);
+
+/* ---------------- 渲染 ---------------- */
+const CLOSED_LIMIT = 5;          // 看板「已結案」欄最多顯示張數
+const RISK_TXT = { high:'高風險', mid:'注意', low:'正常', done:'已結案' };
+const RISK_CLS = { high:'b-high', mid:'b-mid', low:'b-low', done:'b-done' };
+
+function dueText(r){
+  if(r.stage === 'closed') return '已結案';
+  if(r.dueIn < 0) return `逾期 ${-r.dueIn} 天`;
+  if(r.dueIn === 0) return '今天到期';
+  return `剩 ${r.dueIn} 天`;
+}
+
+function visible(){
+  const q = state.q.trim().toLowerCase();
+  return rows.filter(r=>{
+    if(state.cust && (r.customer||'') !== state.cust) return false;
+    if(state.owner && r.owner !== state.owner) return false;
+    if(state.risk){
+      if(state.risk === 'high' && r.risk !== 'high') return false;
+      if(state.risk === 'mid'  && r.risk !== 'mid')  return false;
+      if(state.risk === 'low'  && r.risk !== 'low')  return false;
+    }
+    if(!q) return true;
+    const hay = [r.no, r.order, r.code, r.fork, r.wheel, r.material, productName(r), r.customer]
+      .join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+function renderKPI(){
+  const active = rows.filter(r=>r.stage !== 'closed');
+  const due7 = active.filter(r=>r.dueIn >= 0 && r.dueIn <= 7).length;
+  const high = rows.filter(r=>r.risk === 'high');
+  const overdue = high.filter(r=>r.dueIn < 0).length;
+  const soon = high.length - overdue;
+  const avg = active.length ? Math.round(active.reduce((s,r)=>s+r.pct,0)/active.length) : 0;
+  // 準時達交率：以已結案紀錄實算（沒有紀錄時才用示範值）
+  const closedRows = rows.filter(r=>r.stage === 'closed' && r.closedAt);
+  const onTimeN = closedRows.filter(r=>dayNum(r.closedAt) <= dayNum(r.due)).length;
+  const otdBase = closedRows.length ? { onTime: onTimeN, total: closedRows.length } : HISTORY;
+  const otd = otdBase.total ? Math.round(otdBase.onTime/otdBase.total*100) : 0;
+
+  const g = id => document.getElementById(id);
+  g('kpiWip').textContent = active.length;
+  g('kpiWipSub').textContent = active.length
+    ? `${active.filter(r=>r.blocked).length} 張等輪子 · ${active.reduce((s,r)=>s+r.qty,0).toLocaleString()} 只`
+    : '目前無在製';
+  g('kpiDue').textContent = due7;
+  g('kpiLate').textContent = high.length;
+  g('kpiLateSub').textContent = `逾期 ${overdue} · 將逾期 ${soon}`;
+  g('kpiAvg').innerHTML = `${avg}<small>%</small>`;
+  g('kpiOtd').innerHTML = `${otd}<small>%</small>`;
+  g('kpiOtdSub').textContent = `${otdBase.onTime}/${otdBase.total} 準時 · ${closedRows.length ? '已結案' : '近 30 日'}`;
+
+  g('cAll').textContent = rows.length;
+  g('cHigh').textContent = high.length;
+  g('cMid').textContent = rows.filter(r=>r.risk === 'mid').length;
+  g('cLow').textContent = rows.filter(r=>r.risk === 'low').length;
+}
+
+function renderFilters(){
+  const custSel = document.getElementById('fCust');
+  const ownerSel = document.getElementById('fOwner');
+  const custs = [...new Set(orders.map(o=>o.customer).filter(Boolean))].sort();
+  const owners = [...new Set(orders.map(o=>o.owner).filter(Boolean))].sort();
+  custSel.innerHTML = '<option value="">全部客戶</option>' +
+    custs.map(c=>`<option value="${c}"${state.cust===c?' selected':''}>${c}</option>`).join('');
+  ownerSel.innerHTML = '<option value="">全部負責人</option>' +
+    owners.map(o=>`<option value="${o}"${state.owner===o?' selected':''}>${o}</option>`).join('');
+}
+
+function cardHTML(r){
+  return `<article class="card ${r.risk}" data-no="${r.no}">
+    <div class="c-top">
+      <span class="c-no">#${r.no}</span>
+      <span class="c-badge ${RISK_CLS[r.risk]}" style="margin-left:auto;">${RISK_TXT[r.risk]}</span>
+    </div>
+    <h3 class="c-title">${productName(r)}</h3>
+    <div class="c-sub">${r.code} · ${r.order||'—'}</div>
+    <div class="c-spec">${r.fork}｜${r.plating||'—'}｜${r.screw||'—'}｜${qtyText(r)}</div>
+    <div class="bar"><i style="width:${r.pct}%"></i></div>
+    <div class="c-line"><span class="c-pct">${r.pct}%</span></div>
+    <div class="c-op">▸ ${r.stage === 'closed' ? '已結案' : r.curOp}<span>${dueText(r)}</span></div>
+    ${r.blocked ? '<span class="c-badge b-warn">⚠ 輪子未到</span>' : ''}
+    ${r.issueHold ? '<span class="c-badge b-warn">⚠ 異常未結案</span>' : ''}
+    ${r.openIssue && !r.blocked && !r.issueHold ? '<span class="c-badge b-side">異常處理中</span>' : ''}
+  </article>`;
+}
+
+function renderBoard(){
+  const cols = STAGES.filter(s => s.key !== SPECIAL_STAGE || rows.some(r=>r.stage === SPECIAL_STAGE));
+  const data = visible();
+  document.getElementById('board').innerHTML = cols.map(s=>{
+    let list = data.filter(r=>r.stage === s.key);
+
+    if(s.key === 'closed'){
+      // 結案：依結案時間新 → 舊
+      list = list.slice().sort((a,b)=>(b.closedAt || '').localeCompare(a.closedAt || ''));
+    } else {
+      list.sort((a,b)=>({high:0,mid:1,low:2,done:3})[a.risk] - ({high:0,mid:1,low:2,done:3})[b.risk] || a.dueIn - b.dueIn);
+    }
+
+    const total = list.length;
+    const shown = s.key === 'closed' ? list.slice(0, CLOSED_LIMIT) : list;
+
+    return `<section class="col">
+      <div class="col-head" style="--c:${s.color}">
+        <span class="dot"></span><span class="nm">${s.name}</span>
+        ${s.note ? `<span class="tag2">${s.note}</span>` : ''}
+        <span class="ct">${total}</span>
+      </div>
+      <div class="col-body">
+        ${shown.length ? shown.map(cardHTML).join('') : '<div class="col-empty">—</div>'}
+        ${s.key === 'closed' && total > shown.length
+          ? `<button class="col-more" id="moreClosed">其餘 ${total - shown.length} 張已轉入訂單紀錄 →</button>` : ''}
+      </div>
+    </section>`;
+  }).join('');
+
+  const more = document.getElementById('moreClosed');
+  if(more) more.onclick = () => setView('rec');
+
+  document.getElementById('board').querySelectorAll('.card').forEach(el=>{
+    el.addEventListener('click', ()=>openDrawer(el.dataset.no));
+    if(flashSet.has(el.dataset.no)) el.style.animation = 'none';
+  });
+  flashSet = new Set();
+}
+
+function renderList(){
+  const data = visible();
+  document.getElementById('listBody').innerHTML = data.map(r=>`
+    <tr data-no="${r.no}" style="cursor:pointer;">
+      <td class="mono">#${r.no}</td>
+      <td class="mono">${r.code}</td>
+      <td>${productName(r)}</td>
+      <td class="mono">${qtyText(r)}</td>
+      <td>${r.stage === 'closed' ? '已結案' : r.curOp}</td>
+      <td class="mono">${r.pct}%</td>
+      <td class="mono">${shortDate(r.due)}</td>
+      <td><span class="c-badge ${RISK_CLS[r.risk]}">${RISK_TXT[r.risk]}</span></td>
+      <td>${r.owner}</td>
+    </tr>`).join('');
+  document.getElementById('listBody').querySelectorAll('tr').forEach(tr=>{
+    tr.addEventListener('click', ()=>openDrawer(tr.dataset.no));
+  });
+}
+
+/* ---------------- 訂單紀錄 ---------------- */
+function recRows(){
+  return rows.filter(r=>r.stage === 'closed')
+    .sort((a,b)=>(b.closedAt || '').localeCompare(a.closedAt || ''));
+}
+
+function renderRec(){
+  const list = recRows();
+  document.getElementById('recCount').textContent = `共 ${list.length} 張`;
+
+  document.getElementById('recBody').innerHTML = list.length ? list.map((r,i)=>{
+    const d = dayNum(r.closedAt) - dayNum(r.due);
+    const res = d <= 0
+      ? '<span class="c-badge b-low">準時</span>'
+      : `<span class="c-badge b-high">逾期 ${d} 天</span>`;
+    const mainOps = r.ops.filter(x=>x.lane !== 'side');
+    const doneN = mainOps.filter(x=>x.pct >= 100).length;
+
+    return `<tr data-no="${r.no}" style="cursor:pointer;">
+      <td class="mono">${r.closedAt}${i < CLOSED_LIMIT ? '<span class="on-board">看板</span>' : ''}</td>
+      <td class="mono">#${r.no}</td>
+      <td class="mono">${r.code}</td>
+      <td>${productName(r)}</td>
+      <td class="mono">${typeText(r)} · ${qtyText(r)}</td>
+      <td class="mono">${shortDate(r.due)}</td>
+      <td>${res}</td>
+      <td class="mono">${doneN}/${mainOps.length}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px;">尚無結案紀錄</td></tr>';
+
+  document.getElementById('recBody').querySelectorAll('tr[data-no]').forEach(tr=>{
+    tr.addEventListener('click', ()=>openDrawer(tr.dataset.no));
+  });
+}
+
+const csvCell = v => {
+  const s = String(v ?? '');
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+};
+
+function recordsCsv(){
+  const head = ['結案日','派工單','訂單號','客戶代碼','品名','型式','數量','單位','箱數',
+                '預交','交期結果','腳架','電鍍顏色','螺絲','上皿','下皿','輪子','材質','顏色','包裝方式','負責人'];
+  const lines = [head.join(',')];
+
+  recRows().forEach(r=>{
+    const d = dayNum(r.closedAt) - dayNum(r.due);
+    lines.push([
+      r.closedAt, r.no, r.order, r.code, productName(r), (r.types || []).join('+'),
+      r.qty, r.unit, r.cartons || '', r.due,
+      d <= 0 ? '準時' : `逾期 ${d} 天`,
+      r.fork, r.plating, r.screw, r.up, r.down, r.wheel, r.material, r.color, r.pack, r.owner
+    ].map(csvCell).join(','));
+  });
+
+  return '\uFEFF' + lines.join('\r\n');
+}
+
+function downloadCsv(){
+  const blob = new Blob([recordsCsv()], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `訂單紀錄_${isoDate(now())}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 3000);
+}
+
+async function syncRecords(){
+  const list = recRows();
+  if(!list.length){ toast('目前沒有結案紀錄可同步'); return; }
+
+  if(!CFG.recordEndpoint){
+    downloadCsv();
+    toast('尚未接 Google Sheets：已匯出 CSV，可直接貼上試算表');
+    return;
+  }
+
+  try{
+    const res = await fetch(CFG.recordEndpoint, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},   // 避開 CORS preflight
+      body: JSON.stringify({ action:'archive', csv: recordsCsv() })
+    });
+    const j = await res.json();
+    toast(`已同步 ${j.count ?? list.length} 筆到「訂單紀錄」`);
+  }catch(err){
+    downloadCsv();
+    toast('同步失敗，已改為匯出 CSV');
+  }
+}
+
+function renderAll(){
+  renderKPI(); renderFilters(); renderBoard(); renderList(); renderRec();
+  document.getElementById('updated').textContent = `更新 ${fmtTime(lastUpdated)}`;
+}
+
+/* ---------------- 詳情抽屜 ---------------- */
+function opRow(o, i, locked){
+  const s = o.pct >= 100 ? 'done' : (o.pct > 0 ? 'run' : 'wait');
+  return `<tr>
+    <td style="padding:6px 4px;">${o.name}${o.lane === 'side' ? ' <span class="c-badge b-side" style="margin:0;padding:0 3px;">支線</span>' : ''}
+      <div style="font-size:10px;color:var(--muted);font-family:var(--mono);">${shortDate(o.planS)} → ${shortDate(o.planE)}${o.owner ? ' · ' + o.owner : ''}</div>
+      ${o.note ? `<div style="font-size:10px;color:var(--mid);">${o.note}</div>` : ''}</td>
+    <td style="padding:6px 4px;width:56px;"><div class="bar" style="margin:0;"><i data-bar="${i}" style="width:${o.pct}%"></i></div></td>
+    <td style="padding:6px 4px;width:138px;">
+      <div class="seg ${locked ? 'locked' : ''}" data-i="${i}"${locked ? ' title="輪子採購未完成，完成後才能進檢驗"' : ''}>
+        <button data-s="wait" class="${s === 'wait' ? 'on' : ''}">未開始</button>
+        <button data-s="run"  class="${s === 'run'  ? 'on' : ''}">進行中</button>
+        <button data-s="done" class="${s === 'done' ? 'on' : ''}">完成</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+let drawerNo = null;
+
+function openDrawer(no){
+  const r = rows.find(x=>x.no === no);
+  if(!r) return;
+  drawerNo = no;
+  const mainOps = r.ops.map((o,i)=>({o,i})).filter(x=>x.o.lane !== 'side');
+  const sideOps = r.ops.map((o,i)=>({o,i})).filter(x=>x.o.lane === 'side');
+
+  document.getElementById('dHead').innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-family:var(--mono);font-size:15px;font-weight:700;">#${r.no}</span>
+      <span class="c-badge ${RISK_CLS[r.risk]}">${RISK_TXT[r.risk]}</span>
+      <button class="btn ghost" id="closeDrawer" style="margin-left:auto;color:#cfe0e4;">×</button>
+    </div>
+    <h2 style="margin:6px 0 3px;font-size:16px;">${productName(r)}</h2>
+    <div style="font-size:11.5px;color:#9db0b6;font-family:var(--mono);">${r.code} · ${r.order||'—'} · ${qtyText(r)}</div>
+    <div style="display:flex;gap:18px;margin-top:10px;font-size:11px;color:#cfe0e4;">
+      <span>完成 <b id="dPct" style="font-family:var(--mono);color:#fff;">${r.pct}%</b></span>
+      <span>當前 <b id="dStage" style="color:#fff;">${r.stage==='closed'?'已結案':stageName(r.stage)}</b></span>
+      <span>${dueText(r)}</span>
+    </div>`;
+
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="sec-t">派工規格</div>
+    <div class="spec">
+      <div><span>客戶代碼</span>${r.code||'—'}</div>
+      <div><span>腳架</span>${r.fork||'—'}</div>
+      <div><span>電鍍顏色</span>${r.plating||'—'}</div>
+      <div><span>螺絲／四角板</span>${r.screw||'—'}</div>
+      <div><span>上皿／下皿（編號）</span>${r.up||'—'} / ${r.down||'—'}</div>
+      <div><span>輪子</span>${r.wheel||'—'}</div>
+      <div><span>材質／顏色</span>${r.material||'—'} / ${r.color||'—'}</div>
+      <div><span>型式與數量</span>${typeText(r)}</div>
+      <div><span>合計</span>${qtyText(r)}</div>
+      <div><span>製表日</span>${r.created||'—'}</div>
+      <div><span>預交日</span>${r.due}${r.forecast ? '（預計 '+shortDate(r.forecast)+'）' : ''}</div>
+      <div><span>負責人</span>${r.owner}</div>
+      <div><span>客戶</span>${r.customer||'—'}</div>
+      <div style="grid-column:1/-1;"><span>包裝方式</span>${r.packing||'—'}</div>
+    </div>
+
+    ${r.issueHold ? `<div class="c-badge b-warn" style="margin:0 0 8px;">⚠ 有未結案異常，流程暫停在「${stageName(r.stage)}」</div>` : ''}
+
+    <div class="sec-t">主線流程（點選狀態即可更新）</div>
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
+      <tbody>${mainOps.map(x=>opRow(x.o, x.i, x.o.stage === 'inspect' && !r.wheelsOk)).join('')}</tbody>
+    </table>
+
+    <div class="sec-t">支線：採購（輪子）· 完成後才能進檢驗</div>
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px;">
+      <tbody>${sideOps.map(x=>opRow(x.o, x.i, false)).join('')}</tbody>
+    </table>
+    ${r.blocked ? '<div class="c-badge b-warn" style="margin-top:8px;">⚠ 輪子未到：成品組裝完成也無法進檢驗</div>' : ''}
+
+    <div class="sec-t" style="display:flex;align-items:center;">
+      異常與對策
+      <button class="btn ghost" id="btnAddIssue" style="margin-left:auto;height:22px;padding:0 8px;font-size:10.5px;">＋ 新增異常</button>
+    </div>
+
+    ${(r.issues||[]).length ? r.issues.map((i,ix)=>`
+      <div class="issue ${i.status === '已結案' ? 'is-closed' : ''}">
+        <div class="issue-h">
+          <b>${i.date} · ${i.op} · 影響 ${i.days} 日</b>
+          <div class="seg iseg" data-i="${ix}">
+            <button data-s="open"   class="${i.status !== '已結案' ? 'on' : ''}">處理中</button>
+            <button data-s="closed" class="${i.status === '已結案' ? 'on' : ''}">已結案</button>
+          </div>
+          <button class="xbtn" data-del="${ix}" title="刪除">×</button>
+        </div>
+        <div class="is-desc" style="color:var(--ink-2);margin-top:3px;">${i.desc}</div>
+        <div style="color:var(--muted);margin-top:2px;">對策：${i.action || '—'}${i.owner ? '（' + i.owner + '）' : ''}</div>
+      </div>`).join('') : '<div style="font-size:11.5px;color:var(--muted);margin-bottom:8px;">目前無異常</div>'}
+
+    <div id="issueForm" hidden>
+      <div class="if-grid">
+        <div class="fld"><label>日期</label><input id="iDate" type="date"></div>
+        <div class="fld"><label>工序</label>
+          <select id="iOp">${mainOps.map(x=>`<option>${x.o.name}</option>`).join('')}<option>其他</option></select>
+        </div>
+        <div class="fld"><label>影響天數</label><input id="iDays" type="number" min="0" step="0.5" value="1"></div>
+      </div>
+      <div class="fld" style="margin-top:8px;"><label>異常描述 *</label><input id="iDesc" placeholder="例：煞車輪到料僅 60 只"></div>
+      <div class="if-grid" style="margin-top:8px;">
+        <div class="fld" style="grid-column:1/3;"><label>對策</label><input id="iAction" placeholder="例：11/07 前補足 140 只"></div>
+        <div class="fld"><label>責任人</label><input id="iOwner" placeholder="例：採購"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+        <button class="btn" id="btnCancelIssue" style="height:26px;">取消</button>
+        <button class="btn primary" id="btnSaveIssue" style="height:26px;">儲存</button>
+      </div>
+    </div>
+
+    <div class="sec-t">物料與採購</div>
+    ${(r.materials||[]).length ? r.materials.map(m=>`
+      <div style="display:flex;gap:8px;font-size:11.5px;margin-bottom:6px;">
+        <span style="flex:1;">${m.item}</span>
+        <span class="mono" style="color:${m.got < m.need ? 'var(--high)' : 'var(--low)'};">${m.got}/${m.need}</span>
+        <span class="mono" style="color:var(--muted);width:60px;text-align:right;">${m.eta||'—'}</span>
+      </div>
+      ${m.note ? `<div style="font-size:10.5px;color:var(--muted);margin:-2px 0 8px;">${m.vendor||''} ${m.note}</div>` : ''}`).join('')
+      : '<div style="font-size:11.5px;color:var(--muted);">無資料</div>'}
+
+    <div class="sec-t">跟進紀錄</div>
+    ${(r.logs||[]).length ? r.logs.map(l=>`
+      <div style="font-size:11.5px;margin-bottom:8px;">
+        <span class="mono" style="color:var(--muted);">${l.date}</span> · <b>${l.by}</b>
+        <div style="color:var(--ink-2);">${l.summary}</div>
+        <div style="color:var(--muted);">待辦：${l.todo}</div>
+      </div>`).join('') : '<div style="font-size:11.5px;color:var(--muted);">無紀錄</div>'}
+
+    <div style="margin-top:16px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:10.5px;color:var(--muted);">點「未開始／進行中／完成」即更新（本機儲存）</span>
+      ${r.custom ? '<button class="btn danger" id="btnDel" style="margin-left:auto;">刪除此單</button>' : ''}
+    </div>
+
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);display:flex;justify-content:space-between;">
+      <span>來源：派工單（紙本）</span><span>最後更新 ${fmtTime(r.updated)}</span>
+    </div>`;
+
+  document.getElementById('drawer').style.transform = 'translateX(0)';
+  const sc = document.getElementById('scrim');
+  sc.style.opacity = 1; sc.style.pointerEvents = 'auto';
+
+  document.getElementById('closeDrawer').onclick = closeDrawer;
+  document.querySelectorAll('#drawerBody .seg:not(.iseg)').forEach(seg=>{
+    seg.querySelectorAll('button').forEach(b=>{
+      b.onclick = ()=>setStatus(no, +seg.dataset.i, b.dataset.s);
+    });
+  });
+
+  // 異常：新增 / 切換狀態 / 刪除
+  const addBtn = document.getElementById('btnAddIssue');
+  if(addBtn) addBtn.onclick = ()=>{
+    const f = document.getElementById('issueForm');
+    f.hidden = false;
+    document.getElementById('iDate').value = isoDate(now());
+    document.getElementById('iDesc').value = '';
+    document.getElementById('iAction').value = '';
+    document.getElementById('iOwner').value = '';
+    document.getElementById('iDays').value = 1;
+    document.getElementById('iOp').selectedIndex = 0;
+    document.getElementById('iDesc').classList.remove('err');
+    setTimeout(()=>document.getElementById('iDesc').focus(), 40);
+  };
+  const cancelBtn = document.getElementById('btnCancelIssue');
+  if(cancelBtn) cancelBtn.onclick = ()=>{ document.getElementById('issueForm').hidden = true; };
+  const saveBtn = document.getElementById('btnSaveIssue');
+  if(saveBtn) saveBtn.onclick = ()=>saveIssue(no);
+
+  document.querySelectorAll('#drawerBody .iseg').forEach(seg=>{
+    seg.querySelectorAll('button').forEach(b=>{
+      b.onclick = ()=>toggleIssue(no, +seg.dataset.i);
+    });
+  });
+  document.querySelectorAll('#drawerBody .xbtn').forEach(b=>{
+    b.onclick = ()=>delIssue(no, +b.dataset.del);
+  });
+  const del = document.getElementById('btnDel');
+  if(del) del.onclick = ()=>{
+    if(!confirm(`確定刪除派工單 #${no}？`)) return;
+    orders = orders.filter(o=>o.no !== no);
+    saveOrders(); rows = orders.map(derive); renderAll(); closeDrawer(); toast(`已刪除 #${no}`);
+  };
+}
+
+function closeDrawer(){
+  document.getElementById('drawer').style.transform = 'translateX(100%)';
+  const sc = document.getElementById('scrim');
+  sc.style.opacity = 0; sc.style.pointerEvents = 'none';
+}
+
+/* ---------------- 異常紀錄 ---------------- */
+function redrawDrawer(){
+  const body = document.getElementById('drawerBody');
+  const top = body.scrollTop;
+  openDrawer(drawerNo);
+  body.scrollTop = top;
+}
+
+function commitOrder(o, msg){
+  o.updated = now();
+  lastUpdated = now();
+  saveOrders();
+  rows = orders.map(derive);
+  renderKPI(); renderBoard(); renderList();
+  document.getElementById('updated').textContent = `更新 ${fmtTime(lastUpdated)}`;
+  redrawDrawer();
+  if(msg) toast(msg);
+}
+
+function saveIssue(no){
+  const o = orders.find(x=>x.no === no);
+  if(!o) return;
+  const desc = document.getElementById('iDesc').value.trim();
+  if(!desc){
+    document.getElementById('iDesc').classList.add('err');
+    document.getElementById('iDesc').focus();
+    return;
+  }
+  o.issues.unshift({
+    date: document.getElementById('iDate').value || isoDate(now()),
+    op: document.getElementById('iOp').value,
+    days: Number(document.getElementById('iDays').value) || 0,
+    desc,
+    action: document.getElementById('iAction').value.trim(),
+    owner: document.getElementById('iOwner').value.trim(),
+    status: '處理中'
+  });
+  commitOrder(o, '已新增異常');
+}
+
+function toggleIssue(no, ix){
+  const o = orders.find(x=>x.no === no);
+  if(!o || !o.issues[ix]) return;
+  const it = o.issues[ix];
+  it.status = it.status === '已結案' ? '處理中' : '已結案';
+  commitOrder(o, it.status === '已結案' ? '異常已結案' : '異常改回處理中');
+}
+
+function delIssue(no, ix){
+  const o = orders.find(x=>x.no === no);
+  if(!o || !o.issues[ix]) return;
+  if(!confirm('刪除這筆異常紀錄？')) return;
+  o.issues.splice(ix, 1);
+  commitOrder(o, '已刪除異常紀錄');
+}
+
+/* ---------------- 更新進度 ---------------- */
+function setStatus(no, idx, s){
+  const o = orders.find(x=>x.no === no);
+  if(!o || !o.ops[idx]) return;
+  const op = o.ops[idx];
+
+  // 閘門：採購（輪子）未完成，檢驗不得開始
+  if(s !== 'wait' && op.stage === 'inspect'){
+    const wheels = o.ops.filter(x=>x.lane === 'side');
+    if(wheels.some(x=>x.pct < 100)){
+      toast('輪子採購尚未完成，先完成採購才能進檢驗');
+      return;
+    }
+  }
+
+  if(s === 'done')      op.pct = 100;
+  else if(s === 'wait') op.pct = 0;
+  else                  op.pct = (op.pct > 0 && op.pct < 100) ? op.pct : 50;  // 進行中：保留原進度，首次給 50
+
+  if(op.pct > 0 && !op.actS) op.actS = isoDate(now());
+  if(op.pct >= 100) op.actE = op.actE || isoDate(now());
+  else op.actE = '';
+
+  o.updated = now();
+  lastUpdated = now();
+  saveOrders();
+
+  rows = orders.map(derive);
+  renderKPI(); renderBoard(); renderList();
+  document.getElementById('updated').textContent = `更新 ${fmtTime(lastUpdated)}`;
+
+  // 就地更新抽屜，不重繪整份（保留捲動位置）
+  const seg = document.querySelector(`#drawerBody .seg[data-i="${idx}"]`);
+  if(seg) seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.s === s));
+  const bar = document.querySelector(`#drawerBody [data-bar="${idx}"]`);
+  if(bar) bar.style.width = op.pct + '%';
+  const nr = rows.find(x=>x.no === no);
+  if(nr){
+    document.getElementById('dPct').textContent = nr.pct + '%';
+    document.getElementById('dStage').textContent = nr.stage === 'closed' ? '已結案' : stageName(nr.stage);
+  }
+
+  const hasOpen = (o.issues || []).some(i=>i.status !== '已結案' && i.op === op.name);
+  if(s === 'done' && hasOpen) toast('已標記完成；異常未結案，流程暫停');
+}
+
+/* ---------------- 新增派工單 ---------------- */
+const BASE_OPS = [
+  ['備料（鐵件）','mat',8],
+  ['沖壓','press',24],
+  ['電鍍（委外）','plate',12],
+  ['腳架組裝','fork',18],
+  ['成品組裝','assemble',20],
+  ['檢驗','inspect',10],
+  ['包裝出貨','pack',8]
+];
+const SPECIAL_OP = ['特殊加工（熱處理／震動）','special',20];
+const SIDE_OP = ['採購（輪子）','purchase',16];
+
+function allocate(list, startNum, endNum){
+  const s0 = startNum, e0 = Math.max(endNum, startNum);
+  const span = e0 - s0 + 1;
+  const totalH = list.reduce((s,t)=>s+t[2],0) || 1;
+  const dur = list.map(t=>Math.max(1, Math.round(t[2]/totalH*span)));
+  let diff = dur.reduce((a,b)=>a+b,0) - span;
+  while(diff > 0 && dur.some(v=>v>1)){
+    const i = dur.indexOf(Math.max(...dur)); dur[i]--; diff--;
+  }
+  while(diff < 0){
+    const i = dur.indexOf(Math.max(...dur)); dur[i]++; diff++;
+  }
+  let cursor = s0;
+  return list.map((t,i)=>{
+    const s = Math.min(cursor, e0);
+    const e = Math.min(s + dur[i] - 1, e0);
+    cursor = e + 1;
+    return { name:t[0], stage:t[1], hours:t[2], lane:'main',
+             pct:0, planS:isoNum(s), planE:isoNum(e), actS:'', actE:'', owner:'', note:'' };
+  });
+}
+
+const modal = document.getElementById('modal');
+const $ = id => document.getElementById(id);
+
+function nextNo(){
+  const nums = orders.map(o=>parseInt(o.no,10)).filter(n=>!isNaN(n));
+  const n = (nums.length ? Math.max(...nums) : 0) + 1;
+  return String(n).padStart(6,'0');
+}
+
+function openModal(){
+  $('fNo').value = nextNo();
+  ['fOrder','fCode','fName','fFork','fScrew','fUp','fDown','fWheel','fColor','fQty','fCartons','fCust2','fPack','fOwner2']
+    .forEach(id=>{ $(id).value = ''; });
+  $('fPlating').value = ''; $('fMat').value = ''; $('fUnit').value = '只';
+  const t = now();
+  $('fDate').value = isoDate(t);
+  const due = new Date(t.getTime() + 20*864e5);
+  $('fDue').value = isoDate(due);
+  $('fForecast').value = isoDate(due);
+  $('fSpecial').checked = false;
+  document.querySelectorAll('#fTypes input[type=checkbox]').forEach(c=>{ c.checked = false; });
+  document.querySelectorAll('#fTypes .tq').forEach(q=>{ q.value = ''; q.disabled = true; });
+  document.querySelectorAll('#modal .err').forEach(el=>el.classList.remove('err'));
+  $('formErr').hidden = true;
+  modal.hidden = false;
+  setTimeout(()=>$('fCode').focus(), 30);
+}
+function closeModal(){ modal.hidden = true; }
+
+function createOrder(){
+  const g = id => $(id).value.trim();
+  const need = [['fNo','派工單號'],['fCode','客戶代碼'],['fFork','腳架'],['fWheel','輪子規格'],
+                ['fDate','製表日'],['fDue','預交日'],['fOwner2','負責人']];
+  let bad = null, msg = [];
+  need.forEach(([id,label])=>{
+    if(!g(id)){ bad = bad || id; $(id).classList.add('err'); msg.push(label); }
+    else $(id).classList.remove('err');
+  });
+
+  const typeRows = [...document.querySelectorAll('#fTypes .trow')]
+    .map(row=>({
+      name: row.querySelector('input[type=checkbox]').value,
+      on: row.querySelector('input[type=checkbox]').checked,
+      qty: Number(row.querySelector('.tq').value) || 0
+    })).filter(t=>t.on);
+
+  if(!typeRows.length){ msg.push('型式（至少勾一種）'); bad = bad || 'fTypes'; }
+  if(msg.length){
+    const el = $('formErr');
+    el.textContent = '請填寫：' + msg.join('、');
+    el.hidden = false;
+    if(bad && $(bad) && $(bad).focus) $(bad).focus();
+    return;
+  }
+  $('formErr').hidden = true;
+
+  const types = typeRows.map(t=>t.name);
+  const typeQty = Object.fromEntries(typeRows.map(t=>[t.name, t.qty]));
+  const sumQty = typeRows.reduce((s,t)=>s+t.qty, 0);
+
+  const no = g('fNo');
+  if(orders.some(o=>o.no === no)){
+    $('fNo').classList.add('err');
+    const el = $('formErr');
+    el.textContent = `派工單號 ${no} 已存在`;
+    el.hidden = false;
+    return;
+  }
+
+  const created = g('fDate'), due = g('fDue');
+  const forecast = g('fForecast') || due;
+  const s0 = dayNum(created), e0 = dayNum(forecast);
+  const special = $('fSpecial').checked;
+
+  const list = special
+    ? [BASE_OPS[0], BASE_OPS[1], SPECIAL_OP, ...BASE_OPS.slice(2)]
+    : BASE_OPS.slice();
+  const mainOps = allocate(list, s0, e0);
+  const sideOps = allocate([SIDE_OP], s0, Math.max(s0, s0 + Math.round((e0 - s0) * 0.6)));
+  sideOps[0].lane = 'side';
+
+  const o = normalizeOrder({
+    no, order: g('fOrder'), code: g('fCode'), name: g('fName'),
+    fork: g('fFork'), plating: $('fPlating').value, screw: g('fScrew'),
+    up: g('fUp'), down: g('fDown'), wheel: g('fWheel'),
+    material: $('fMat').value, color: g('fColor'),
+    types, typeQty, qty: sumQty || Number(g('fQty')) || 0,
+    cartons: Number(g('fCartons')) || 0, unit: $('fUnit').value,
+    packing: g('fPack'), customer: g('fCust2'),
+    owner: g('fOwner2'), created, due, forecast,
+    custom: true,
+    ops: [...mainOps, ...sideOps],
+    issues: [], materials: [],
+    logs: [{ date: isoDate(now()), by: g('fOwner2'),
+             summary: `建立派工單${special ? '（含特殊加工）' : ''}`,
+             todo: '確認材料與輪子到料日' }],
+    updated: now()
+  });
+
+  orders.unshift(o);
+  saveOrders();
+  lastUpdated = now();
+  rows = orders.map(derive);
+  state.risk = ''; state.q = ''; state.cust = ''; state.owner = '';
+  $('fQ').value = ''; $('fCust').value = ''; $('fOwner').value = '';
+  document.querySelectorAll('#chips .chip').forEach(c=>c.classList.toggle('on', c.dataset.risk === ''));
+  renderAll();
+  closeModal();
+  toast(`已建立 #${no}`);
+  setTimeout(()=>openDrawer(no), 120);
+}
+
+/* ---------------- 篩選與事件 ---------------- */
+document.getElementById('fQ').addEventListener('input', e=>{ state.q = e.target.value; renderBoard(); renderList(); });
+document.getElementById('fCust').addEventListener('change', e=>{ state.cust = e.target.value; renderBoard(); renderList(); });
+document.getElementById('fOwner').addEventListener('change', e=>{ state.owner = e.target.value; renderBoard(); renderList(); });
+document.querySelectorAll('#chips .chip').forEach(c=>{
+  c.addEventListener('click', ()=>{
+    state.risk = c.dataset.risk;
+    document.querySelectorAll('#chips .chip').forEach(x=>x.classList.toggle('on', x === c));
+    renderBoard(); renderList();
+  });
+});
+function setView(v){
+  state.view = v;
+  document.getElementById('board').hidden = v !== 'board';
+  document.getElementById('listView').hidden = v !== 'list';
+  document.getElementById('recView').hidden = v !== 'rec';
+  document.getElementById('btnBoard').classList.toggle('on', v === 'board');
+  document.getElementById('btnList').classList.toggle('on', v === 'list');
+  document.getElementById('btnRec').classList.toggle('on', v === 'rec');
+  if(v === 'rec') renderRec();
+}
+document.getElementById('btnBoard').onclick = ()=>setView('board');
+document.getElementById('btnList').onclick = ()=>setView('list');
+document.getElementById('btnRec').onclick = ()=>setView('rec');
+document.getElementById('btnCsv').onclick = downloadCsv;
+document.getElementById('btnSync').onclick = syncRecords;
+document.getElementById('btnAdd').onclick = openModal;
+document.getElementById('btnCloseModal').onclick = closeModal;
+document.getElementById('btnCancel').onclick = closeModal;
+document.getElementById('btnCreate').onclick = createOrder;
+document.getElementById('scrim').onclick = closeDrawer;
+document.getElementById('btnReset').onclick = ()=>{
+  if(!confirm('清除本機新增與修改，回到示範資料？')) return;
+  localStorage.removeItem(STORE_KEY);
+  orders = seedOrders(); orders.forEach(normalizeQty);
+  saveOrders(); rows = orders.map(derive);
+  state.risk = ''; state.q = ''; state.cust = ''; state.owner = '';
+  document.getElementById('fQ').value = '';
+  document.querySelectorAll('#chips .chip').forEach(c=>c.classList.toggle('on', c.dataset.risk === ''));
+  renderAll(); toast('已重置為示範資料');
+};
+modal.addEventListener('click', e=>{ if(e.target === modal) closeModal(); });
+
+/* 型式勾選 → 啟用數量欄，總數自動帶回「數量」 */
+function syncQty(){
+  const sum = [...document.querySelectorAll('#fTypes .trow')]
+    .filter(r=>r.querySelector('input[type=checkbox]').checked)
+    .reduce((s,r)=>s + (Number(r.querySelector('.tq').value) || 0), 0);
+  if(sum > 0) $('fQty').value = sum;
+}
+document.getElementById('fTypes').addEventListener('change', e=>{
+  if(e.target.matches('input[type=checkbox]')){
+    const row = e.target.closest('.trow');
+    const q = row.querySelector('.tq');
+    q.disabled = !e.target.checked;
+    if(e.target.checked){ q.focus(); }
+    else { q.value = ''; }
+  }
+  syncQty();
+});
+document.getElementById('fTypes').addEventListener('input', e=>{
+  if(e.target.matches('.tq')) syncQty();
+});
+
+document.addEventListener('keydown', e=>{
+  if(e.key !== 'Escape') return;
+  closeDrawer();
+  if(!modal.hidden) closeModal();
+});
+
+/* ---------------- 輪詢 ---------------- */
+let pollLeft = 30;
+function refresh(){
+  lastUpdated = now();
+  rows = orders.map(derive);
+  renderAll();
+  pollLeft = 30;
+}
+document.getElementById('btnRefresh').onclick = ()=>{ refresh(); toast('已更新'); };
+setInterval(()=>{
+  pollLeft--;
+  if(pollLeft <= 0){ refresh(); return; }
+  document.getElementById('countdown').textContent = `${pollLeft}s`;
+}, 1000);
+
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>el.classList.remove('on'), 2200);
+}
+
+/* boot */
+setView('board');
+renderAll();
+document.getElementById('countdown').textContent = `${pollLeft}s`;
+</script>
+</body>
+</html>
+

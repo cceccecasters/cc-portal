@@ -1,6 +1,6 @@
 {
   "updated": "2026-11-16",
-  "note": "S2：ISO 已搬入 /iso/，改為相對路徑",
+  "note": "S3：ISO 與看板都已搬入入口站，全部相對路徑",
   "modules": [
     {
       "id": "iso",
@@ -16,8 +16,8 @@
       "id": "board",
       "name": "生產進度看板",
       "desc": "派工單進度、工序流轉與交期風險。現場回報與異常卡關都在這裡處理。",
-      "path": "https://cceccecasters.github.io/caster-production-board/",
-      "external": true,
+      "path": "./board/",
+      "external": false,
       "status": "live",
       "meta": "即時看板",
       "roles": ["admin", "prod"]
