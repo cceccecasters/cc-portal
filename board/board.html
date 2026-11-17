@@ -886,7 +886,12 @@ function normalizeOrder(r){
       ? { name:o[0], stage:o[1], hours:o[2], pct:o[3], planS:fd(o[4]), planE:fd(o[5]),
           actS:fd(o[6]), actE:fd(o[7]), owner:o[8]||'', note:o[9]||'', lane:o[10]==='side'?'side':'main' }
       : { lane:'main', ...o,
-          planS:fd(o.planS), planE:fd(o.planE), actS:fd(o.actS), actE:fd(o.actE) }),
+          planS:fd(o.planS), planE:fd(o.planE), actS:fd(o.actS), actE:fd(o.actE) })
+      .map(x => {
+        // 舊資料自癒：沒開始的工序不該有實際起訖日
+        if(!(x.pct > 0)){ x.actS = ''; x.actE = ''; }
+        return x;
+      }),
     issues: r.issues||[], materials: r.materials||[], logs: r.logs||[],
     updated: r.updated ? new Date(r.updated) : now()
   };
@@ -1538,9 +1543,15 @@ function setStatus(no, idx, s){
   else if(s === 'wait') op.pct = 0;
   else                  op.pct = (op.pct > 0 && op.pct < 100) ? op.pct : 50;  // 進行中：保留原進度，首次給 50
 
-  if(op.pct > 0 && !op.actS) op.actS = isoDate(now());
-  if(op.pct >= 100) op.actE = op.actE || isoDate(now());
-  else op.actE = '';
+  // 回到「未開始」代表這道工序沒做過：實際起訖日都要清掉，不能留殘值
+  if(op.pct <= 0){
+    op.actS = '';
+    op.actE = '';
+  } else {
+    if(!op.actS) op.actS = isoDate(now());
+    if(op.pct >= 100) op.actE = op.actE || isoDate(now());
+    else op.actE = '';
+  }
 
   // 誰按的：本機顯示用；正式時間以伺服器寫入為準
   if(IDENT){ op.by = IDENT.name; op.at = new Date().toISOString(); }
