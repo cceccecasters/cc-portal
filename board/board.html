@@ -303,6 +303,7 @@
   <div class="tb-right">
     <span class="seg" id="updated">—</span>
     <span class="seg" id="countdown">—</span>
+    <button class="tbtn" id="btnWho">未登入</button>
     <button class="tbtn" id="btnRefresh">更新</button>
     <button class="tbtn on" id="btnBoard">看板</button>
     <button class="tbtn" id="btnList">清單</button>
@@ -733,6 +734,9 @@ const shortDate = s => s ? s.slice(5).replace('-','/') : '—';
 const CFG = {
   endpoint: '',        // Apps Script doGet?action=board（讀看板資料）
   recordEndpoint: '',  // Apps Script doPost（訂單紀錄歸檔）
+  authEndpoint: '',    // 動作紀錄 Apps Script /exec（board-sync.gs）
+  googleClientId: '',  // OAuth Web Client ID（Google 登入）
+  authMode: 'off',     // 'off'＝不啟用｜'strict'＝未登入不得改狀態
   pollSeconds: 30
 };
 
@@ -741,6 +745,117 @@ const STORE_KEY = 'board.orders.v3';
 const state = { q:'', cust:'', owner:'', risk:'', view:'board' };
 let flashSet = new Set();
 let lastUpdated = now();
+
+/* ---------------- 身分：一人一帳號（Google 登入） ---------------- */
+const IDENT_KEY = 'board.ident.v1';
+const QUEUE_KEY = 'board.queue.v1';
+let IDENT = (function(){
+  try{ const j = JSON.parse(localStorage.getItem(IDENT_KEY) || 'null');
+       if(j && j.email && j.exp * 1000 > Date.now()) return j; }catch(e){}
+  return null;
+})();
+
+function paintWho(){
+  const b = document.getElementById('btnWho'); if(!b) return;
+  b.textContent = IDENT ? IDENT.name : '未登入';
+  b.title = IDENT ? IDENT.email + '（點一下登出）' : '點此登入';
+  b.style.background = IDENT ? '' : '#7a2f2f';
+}
+function saveIdent(j){
+  IDENT = j;
+  try{ localStorage.setItem(IDENT_KEY, JSON.stringify(j)); }catch(e){}
+  paintWho(); flushQueue();
+}
+function clearIdent(){
+  IDENT = null;
+  try{ localStorage.removeItem(IDENT_KEY); }catch(e){}
+  paintWho();
+}
+function deviceId(){
+  let d = null;
+  try{ d = localStorage.getItem('board.device'); }catch(e){}
+  if(!d){ d = 'dev-' + Math.random().toString(36).slice(2,10); try{ localStorage.setItem('board.device', d); }catch(e){} }
+  return d;
+}
+function decodeJwt(t){
+  try{
+    const p = t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+    const bin = atob(p); const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }catch(e){ return {}; }
+}
+function loadGsi(cb){
+  if(window.google && google.accounts){ cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = cb;
+  document.head.appendChild(s);
+}
+function onCredential(resp){
+  const j = decodeJwt(resp.credential);
+  const m = document.getElementById('loginModal'); if(m) m.hidden = true;
+  saveIdent({ email: String(j.email||'').toLowerCase(), name: j.name || j.email || '—', exp: j.exp || 0, token: resp.credential });
+  toast('已登入：' + IDENT.name);
+}
+function openLogin(){
+  if(!CFG.googleClientId){ toast('尚未設定 Google 用戶端 ID，請洽系統管理者'); return; }
+  let m = document.getElementById('loginModal');
+  if(!m){
+    m = document.createElement('div');
+    m.id = 'loginModal'; m.className = 'modal'; m.hidden = true;
+    m.innerHTML = '<div class="modal-card" style="max-width:340px;">'
+      + '<div class="modal-head"><h3>登入才能更新進度</h3>'
+      + '<button class="btn ghost" id="loginClose" style="margin-left:auto;">×</button></div>'
+      + '<div class="modal-body" style="text-align:center;">'
+      + '<p style="font-size:12px;color:var(--mid);margin:0 0 14px;">每次改狀態都會記錄你的姓名與時間</p>'
+      + '<div id="gbtn" style="display:flex;justify-content:center;"></div>'
+      + '</div></div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', e => { if(e.target === m) m.hidden = true; });
+    m.querySelector('#loginClose').onclick = () => { m.hidden = true; };
+  }
+  m.hidden = false;
+  loadGsi(function(){
+    google.accounts.id.initialize({ client_id: CFG.googleClientId, callback: onCredential, auto_select: false });
+    google.accounts.id.renderButton(document.getElementById('gbtn'),
+      { theme:'filled_black', size:'large', text:'signin_with', locale:'zh_TW' });
+  });
+}
+
+/* 動作佇列：斷網或後端未設定時先存本機，恢復後補送 */
+function queueAdd(a){
+  let q = [];
+  try{ q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); }catch(e){}
+  q.push(a);
+  try{ localStorage.setItem(QUEUE_KEY, JSON.stringify(q.slice(-300))); }catch(e){}
+}
+async function postAction(a){
+  const res = await fetch(CFG.authEndpoint, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(Object.assign({ action:'log', token: IDENT.token, deviceId: deviceId() }, a))
+  });
+  return res.json();
+}
+async function sendAction(a){
+  if(!IDENT || !CFG.authEndpoint) return;   // 未登入或後端未設定：不記錄、不堆佇列
+  try{
+    const j = await postAction(a);
+    if(!j.ok) throw new Error(j.error || 'failed');
+  }catch(e){ queueAdd(a); }
+}
+async function flushQueue(){
+  if(!CFG.authEndpoint || !IDENT) return;
+  let q = [];
+  try{ q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); }catch(e){}
+  if(!q.length) return;
+  const keep = [];
+  for(const a of q){
+    try{ const j = await postAction(a); if(!j.ok) keep.push(a); }
+    catch(e){ keep.push(a); }
+  }
+  try{ localStorage.setItem(QUEUE_KEY, JSON.stringify(keep)); }catch(e){}
+  if(q.length > keep.length) toast('已補送 ' + (q.length - keep.length) + ' 筆動作紀錄');
+}
 
 const productName = o => o.name || `${o.wheel} ${o.material} ${(o.types||[]).join('+')}腳輪`;
 const qtyText = r => `${r.qty} ${r.unit||'只'}${r.cartons ? ' / ' + r.cartons + ' 箱' : ''}`;
@@ -1156,7 +1271,7 @@ function opRow(o, i, locked){
   const s = o.pct >= 100 ? 'done' : (o.pct > 0 ? 'run' : 'wait');
   return `<tr>
     <td style="padding:6px 4px;">${o.name}${o.lane === 'side' ? ' <span class="c-badge b-side" style="margin:0;padding:0 3px;">支線</span>' : ''}
-      <div style="font-size:10px;color:var(--muted);font-family:var(--mono);">${shortDate(o.planS)} → ${shortDate(o.planE)}${o.owner ? ' · ' + o.owner : ''}</div>
+      <div style="font-size:10px;color:var(--muted);font-family:var(--mono);">${shortDate(o.planS)} → ${shortDate(o.planE)}${o.owner ? ' · ' + o.owner : ''}${o.by ? ' · ✓ ' + o.by : ''}</div>
       ${o.note ? `<div style="font-size:10px;color:var(--mid);">${o.note}</div>` : ''}</td>
     <td style="padding:6px 4px;width:56px;"><div class="bar" style="margin:0;"><i data-bar="${i}" style="width:${o.pct}%"></i></div></td>
     <td style="padding:6px 4px;width:138px;">
@@ -1403,6 +1518,13 @@ function setStatus(no, idx, s){
   if(!o || !o.ops[idx]) return;
   const op = o.ops[idx];
 
+  // 一人一帳號：未登入不得改狀態（authMode='off' 時不啟用）
+  if(CFG.authMode === 'strict' && !IDENT){
+    toast('請先登入，才能更新進度');
+    openLogin();
+    return;
+  }
+
   // 閘門：採購（輪子）未完成，檢驗不得開始
   if(s !== 'wait' && op.stage === 'inspect'){
     const wheels = o.ops.filter(x=>x.lane === 'side');
@@ -1420,9 +1542,17 @@ function setStatus(no, idx, s){
   if(op.pct >= 100) op.actE = op.actE || isoDate(now());
   else op.actE = '';
 
+  // 誰按的：本機顯示用；正式時間以伺服器寫入為準
+  if(IDENT){ op.by = IDENT.name; op.at = new Date().toISOString(); }
+
   o.updated = now();
   lastUpdated = now();
   saveOrders();
+
+  sendAction({
+    actionId: (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'a-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+    jobNo: no, op: op.name, opIndex: idx, action: s
+  });
 
   rows = orders.map(derive);
   renderKPI(); renderBoard(); renderList();
@@ -1687,6 +1817,18 @@ function toast(msg){
 setView('board');
 renderAll();
 document.getElementById('countdown').textContent = `${pollLeft}s`;
+
+/* 身分：繪製登入狀態、補送離線佇列 */
+paintWho();
+document.getElementById('btnWho').onclick = ()=>{
+  if(IDENT){
+    if(confirm('登出 ' + IDENT.name + '？登出後仍可查看，但不能更新進度')) clearIdent();
+  } else {
+    openLogin();
+  }
+};
+flushQueue();
+setInterval(flushQueue, 60000);
 </script>
 </body>
 </html>
